@@ -9,7 +9,13 @@ import websockets
 import json
 import random
 from datetime import datetime
-from typing import Set, Dict, Any
+from typing import Set, Dict, Any, Optional
+import os
+import hashlib
+import pathlib
+
+# HTTP server for TTS and client downloads
+from aiohttp import web, ClientSession
 
 
 class GlaucoGuardServer:
@@ -26,6 +32,15 @@ class GlaucoGuardServer:
         self.latest_frame: str = None  # Store latest video frame from phone
         self.streaming_active = False  # Track if mobile client is actively streaming
         self.explicitly_stopped = False  # Track if streaming was explicitly stopped (prevents re-enabling)
+        # ElevenLabs configuration
+        self.ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+        self.ELEVENLABS_API_BASE = os.getenv("ELEVENLABS_API_BASE", "https://api.elevenlabs.io/v1")
+        # Local cache folder for generated audio
+        self.tts_cache_dir = pathlib.Path(__file__).parent / "tts_cache"
+        try:
+            self.tts_cache_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol, is_mobile: bool = False):
         """Register a new client connection"""
@@ -149,6 +164,51 @@ class GlaucoGuardServer:
             "haptic": haptic
         }
 
+    async def generate_tts(self, text: str, voice: str = "alloy") -> Optional[str]:
+        """
+        Generate TTS via ElevenLabs, save to cache and return filename (relative to tts_cache dir).
+        Returns None on failure.
+        """
+        if not self.ELEVENLABS_API_KEY:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] ELEVENLABS_API_KEY not set - cannot generate TTS")
+            return None
+
+        # Create deterministic filename from text+voice
+        h = hashlib.sha1()
+        h.update((voice + "|" + text).encode("utf-8"))
+        filename = f"tts_{h.hexdigest()}.mp3"
+        out_path = self.tts_cache_dir / filename
+
+        # If cached, return immediately
+        if out_path.exists():
+            return filename
+
+        tts_url = f"{self.ELEVENLABS_API_BASE}/text-to-speech/{voice}"
+        headers = {
+            "Authorization": f"Bearer {self.ELEVENLABS_API_KEY}",
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json"
+        }
+        payload = {"text": text}
+
+        try:
+            async with ClientSession() as session:
+                async with session.post(tts_url, json=payload, headers=headers) as resp:
+                    if resp.status != 200:
+                        txt = await resp.text()
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] ElevenLabs TTS error: {resp.status} {txt}")
+                        return None
+                    data = await resp.read()
+                    try:
+                        out_path.write_bytes(data)
+                        return filename
+                    except Exception as e:
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] Failed to write TTS file: {e}")
+                        return None
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Exception calling ElevenLabs: {e}")
+            return None
+
     async def detection_loop(self):
         """Continuously generate and broadcast detection data"""
         self.detection_active = True
@@ -188,6 +248,26 @@ class GlaucoGuardServer:
                 any_client_streaming = any(self.client_streaming.get(client, False) for client in self.mobile_clients)
                 if any_client_streaming:
                     data = self.simulate_detection()
+
+                    # If detection present, generate a short TTS message and attach a URL to the broadcast
+                    if data.get("detection"):
+                        # Build a short descriptive message
+                        parts = []
+                        zones = data.get("zones", {})
+                        for zone_name in ["left", "center", "right"]:
+                            dist = zones.get(zone_name)
+                            if dist is not None and dist < 200:
+                                parts.append(f"{zone_name} at {dist} centimeters")
+                        if parts:
+                            tts_text = "Obstacle detected " + ", ".join(parts)
+                        else:
+                            tts_text = "Obstacle detected"
+
+                        filename = await self.generate_tts(tts_text)
+                        if filename:
+                            # Expose via http static path /tts_audio/{filename}
+                            data["tts_url"] = f"http://{self.host}:8080/tts_audio/{filename}"
+
                     await self.broadcast(data)
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] Detection data sent to {len(self.clients)} web client(s) (streaming_active: {self.streaming_active}, explicitly_stopped: {self.explicitly_stopped}, any_client_streaming: {any_client_streaming})")
                 else:
@@ -392,6 +472,44 @@ class GlaucoGuardServer:
 
         # Start the detection loop
         detection_task = asyncio.create_task(self.detection_loop())
+
+        # Start a small HTTP server (aiohttp) for TTS and audio file serving
+        app = web.Application()
+
+        async def tts_route(request):
+            """POST /tts
+            JSON body: { "text": "...", "voice": "alloy" }
+            Returns: audio file (audio/mpeg) or JSON error
+            """
+            try:
+                body = await request.json()
+            except Exception:
+                return web.json_response({"error": "invalid_json"}, status=400)
+
+            text = body.get("text")
+            voice = body.get("voice", "alloy")
+            if not text:
+                return web.json_response({"error": "missing_text"}, status=400)
+
+            filename = await self.generate_tts(text, voice=voice)
+            if not filename:
+                return web.json_response({"error": "tts_failed"}, status=502)
+
+            path = self.tts_cache_dir / filename
+            if not path.exists():
+                return web.json_response({"error": "file_not_found"}, status=500)
+
+            return web.FileResponse(path, headers={"Content-Type": "audio/mpeg"})
+
+        # Add routes
+        app.router.add_post("/tts", tts_route)
+        app.router.add_static("/tts_audio", str(self.tts_cache_dir), show_index=False)
+
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", 8080)
+        await site.start()
+        print(f"HTTP TTS service running on http://0.0.0.0:8080 (endpoints: POST /tts, /tts_audio/<file>)")
 
         # Start the WebSocket server
         async with websockets.serve(self.handle_client, self.host, self.port):
