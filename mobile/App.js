@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
+import HomeScreen from './components/HomeScreen';
 
 // WebSocket connection for streaming
 let ws = null;
@@ -9,6 +10,7 @@ let frameInterval = null;
 let isCapturing = false; // Flag to prevent concurrent captures
 
 export default function App() {
+  const [currentScreen, setCurrentScreen] = useState('home'); // 'home' or 'camera'
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -197,6 +199,27 @@ export default function App() {
     setIsConnected(false);
   };
 
+  const handleNavigateToCamera = () => {
+    setCurrentScreen('camera');
+  };
+
+  const handleNavigateToHome = () => {
+    // Stop streaming and disconnect when going back to home
+    if (isStreaming) {
+      stopStreaming();
+    }
+    if (isConnected) {
+      disconnect();
+    }
+    setCurrentScreen('home');
+  };
+
+  // Show home screen
+  if (currentScreen === 'home') {
+    return <HomeScreen onNavigateToCamera={handleNavigateToCamera} />;
+  }
+
+  // Camera permission checks
   if (!permission) {
     return (
       <View style={styles.container}>
@@ -213,10 +236,14 @@ export default function App() {
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.disconnectButton]} onPress={handleNavigateToHome}>
+          <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // Camera screen
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -261,6 +288,9 @@ export default function App() {
             </TouchableOpacity>
           </>
         )}
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#444' }]} onPress={handleNavigateToHome}>
+          <Text style={styles.buttonText}>← BACK TO HOME</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.info}>
