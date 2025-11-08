@@ -277,11 +277,6 @@ MIT License - See LICENSE file for details
 - [ ] Integration with smart glasses
 - [ ] Cloud-based processing option
 
-## Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Contact: [your-email@example.com]
 
 ---
 
