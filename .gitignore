@@ -38,3 +38,8 @@ htmlcov/
 
 # Logs
 *.log
+
+
+# .gitignore
+.env
+.env.*
