@@ -29,12 +29,11 @@
             display: block;
             object-fit: contain;
             transform: translateZ(0); /* Hardware acceleration */
-            will-change: src; /* Optimize for frequent src changes */
+            will-change: contents; /* Optimize for frequent content changes */
             backface-visibility: hidden; /* Improve rendering performance */
             -webkit-backface-visibility: hidden;
-            image-rendering: -webkit-optimize-contrast; /* Faster rendering */
-            image-rendering: crisp-edges; /* Faster rendering */
-            image-rendering: pixelated; /* Fastest rendering mode */
+            image-rendering: auto; /* Let browser optimize rendering */
+            image-rendering: -webkit-optimize-contrast; /* Better quality */
         }
 
         .info-panel {
@@ -199,7 +198,6 @@
                     
                     // Handle video frames from mobile camera
                     if (data.type === 'video_frame' && data.data) {
-                        console.log('Video frame received');
                         // Phone is connected and streaming
                         phoneConnected = true;
                         updateConnectionStatus();
@@ -330,13 +328,14 @@
         }
 
         // Display video frame from mobile camera with optimization
-        let lastFrameTime = 0;
-        const targetFPS = 120; // Target 120 FPS display for maximum smoothness
-        const frameInterval = 1000 / targetFPS; // ~8ms between frames (minimal throttling)
         let isStreaming = false;
         let latestFrame = null; // Store only the latest frame for minimal latency
-        let isProcessingFrame = false;
         let pauseDetectionUpdates = true; // Start with detection paused - only show when streaming
+        let frameUpdateInterval = null; // Timer for continuous frame updates
+        
+        // Target FPS for display (60 FPS = ~16ms for smooth video)
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS; // ~16ms for 60 FPS
         
         function displayVideoFrame(base64Data) {
             // Double check streaming status before processing
@@ -347,15 +346,35 @@
             // Store latest frame (always overwrite for minimal latency)
             latestFrame = base64Data;
             
-            // Process immediately - no waiting
-            if (isStreaming) {
-                updateFrameImmediately();
+            // Start continuous update loop if not already running
+            if (!frameUpdateInterval && isStreaming) {
+                startFrameUpdateLoop();
             }
         }
         
-        function updateFrameImmediately() {
+        function startFrameUpdateLoop() {
+            // Clear any existing interval
+            if (frameUpdateInterval) {
+                clearInterval(frameUpdateInterval);
+            }
+            
+            // Update frames at target FPS
+            frameUpdateInterval = setInterval(() => {
+                updateFrame();
+            }, frameInterval);
+        }
+        
+        function stopFrameUpdateLoop() {
+            if (frameUpdateInterval) {
+                clearInterval(frameUpdateInterval);
+                frameUpdateInterval = null;
+            }
+        }
+        
+        function updateFrame() {
             // Stop processing if not streaming
             if (!isStreaming || !latestFrame) {
+                stopFrameUpdateLoop();
                 return;
             }
             
@@ -364,14 +383,9 @@
             
             if (video && base64Data) {
                 showVideoFrame(); // Show video element
-                // Direct assignment - no requestAnimationFrame delay for maximum speed
+                // Update image source immediately
                 video.src = 'data:image/jpeg;base64,' + base64Data;
             }
-        }
-        
-        // Legacy function name for compatibility
-        function processFrameQueue() {
-            updateFrameImmediately();
         }
         
         function clearVideoFrame() {
@@ -380,7 +394,7 @@
             isStreaming = false;
             pauseDetectionUpdates = true; // Pause detection updates
             latestFrame = null; // Clear latest frame
-            isProcessingFrame = false;
+            stopFrameUpdateLoop(); // Stop the frame update loop
             
             const video = document.getElementById('video');
             const noVideoMsg = document.getElementById('noVideoMessage');

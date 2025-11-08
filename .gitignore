@@ -1,3 +1,5 @@
+tmp/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -38,3 +40,7 @@ htmlcov/
 
 # Logs
 *.log
+
+# Environment variables
+.env
+.env.local

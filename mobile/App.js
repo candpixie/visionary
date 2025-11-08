@@ -12,7 +12,7 @@ export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [serverUrl, setServerUrl] = useState('ws://10.28.39.17:8765'); // Change to your laptop's IP
+  const [serverUrl, setServerUrl] = useState('ws://10.28.255.39:8765'); // Change to your laptop's IP
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -140,7 +140,7 @@ export default function App() {
       } finally {
         isCapturing = false;
       }
-    }, 16); // Send ~60 frames per second for ultra-fast real-time video
+    }, 0.1); // Send frames every 0.1ms (maximum speed - actual rate limited by camera hardware)
   };
 
   const stopStreaming = () => {
