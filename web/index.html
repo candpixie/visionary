@@ -110,19 +110,16 @@
         }
 
         #connectionStatus {
-            position: fixed;
-            top: 10px;
-            right: 10px;
             padding: 10px 20px;
             background: rgba(204, 0, 0, 0.9);
             border: 2px solid #ff4444;
             border-radius: 8px;
             font-weight: bold;
-            font-size: 12px;
-            max-width: 250px;
+            font-size: 14px;
             text-align: center;
             color: #fff;
             box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+            margin-top: 20px;
         }
 
         #connectionStatus.connected {
@@ -144,8 +141,6 @@
     </style>
 </head>
 <body>
-    <div id="connectionStatus">DISCONNECTED</div>
-
     <div class="video-container">
         <h2>GLAUCOGUARD - LIVE FEED (Phone Camera)</h2>
         <img id="video" style="width: 100%; border: 2px solid #00CED1; background: #000; min-height: 200px; box-shadow: 0 0 20px rgba(0, 206, 209, 0.3);" />
@@ -184,6 +179,8 @@
         <div class="status">
             <strong>HAPTIC STATUS:</strong> <span id="hapticStatus">READY</span>
         </div>
+
+        <div id="connectionStatus">DISCONNECTED</div>
     </div>
 
     <script>
@@ -226,6 +223,11 @@
                         pauseDetectionUpdates = false;
                         // Set streaming flag and process frame
                         isStreaming = true;
+                        // Update SYSTEM STATUS to show streaming is active
+                        const statusEl = document.getElementById('status');
+                        if (statusEl) {
+                            statusEl.textContent = 'STREAMING';
+                        }
                         displayVideoFrame(data.data);
                     } else if (data.type === 'stop_streaming') {
                         console.log('*** STOP STREAMING RECEIVED - PAUSING VIDEO AND DETECTION ***');
