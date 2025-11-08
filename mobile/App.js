@@ -409,6 +409,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
     fontSize: 12,
+    fontFamily: 'monospace',
   },
   camera: {
     flex: 1,
@@ -447,6 +448,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'monospace',
   },
   info: {
     padding: 15,
@@ -463,11 +465,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 10,
+    fontFamily: 'monospace',
   },
   helpText: {
     color: '#00CED1',
     fontSize: 14,
     textAlign: 'center',
+    fontFamily: 'monospace',
   },
 });
 

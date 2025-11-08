@@ -257,10 +257,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+    fontFamily: 'monospace',
   },
   optionTextSelected: {
     color: '#00CED1',
     fontWeight: 'bold',
+    fontFamily: 'monospace',
   },
   navigationContainer: {
     flexDirection: 'row',

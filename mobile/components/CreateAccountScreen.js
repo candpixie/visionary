@@ -193,6 +193,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#004D4D',
+    fontFamily: 'monospace',
   },
   createButton: {
     backgroundColor: '#00CED1',
@@ -221,6 +222,7 @@ const styles = StyleSheet.create({
   signInLinkText: {
     color: '#888',
     fontSize: 14,
+    fontFamily: 'monospace',
   },
 });
 

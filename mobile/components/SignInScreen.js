@@ -158,6 +158,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#004D4D',
+    fontFamily: 'monospace',
   },
   signInButton: {
     backgroundColor: '#00CED1',
@@ -186,6 +187,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: '#888',
     fontSize: 14,
+    fontFamily: 'monospace',
   },
   createAccountLink: {
     alignItems: 'center',
@@ -195,6 +197,7 @@ const styles = StyleSheet.create({
     color: '#00CED1',
     fontSize: 14,
     textDecorationLine: 'underline',
+    fontFamily: 'monospace',
   },
 });
 

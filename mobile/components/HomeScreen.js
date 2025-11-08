@@ -105,12 +105,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 15,
+    fontFamily: 'monospace',
   },
   description: {
     fontSize: 16,
     color: '#aaa',
     textAlign: 'center',
     lineHeight: 24,
+    fontFamily: 'monospace',
   },
   buttonContainer: {
     paddingHorizontal: 30,
@@ -148,6 +150,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'monospace',
   },
   footer: {
     alignItems: 'center',
