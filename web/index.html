@@ -19,10 +19,22 @@
             margin-right: 20px;
         }
 
-        video {
+        video, #video {
             width: 100%;
             border: 2px solid #00ff00;
             background: #000;
+        }
+        
+        #video {
+            display: block;
+            object-fit: contain;
+            transform: translateZ(0); /* Hardware acceleration */
+            will-change: src; /* Optimize for frequent src changes */
+            backface-visibility: hidden; /* Improve rendering performance */
+            -webkit-backface-visibility: hidden;
+            image-rendering: -webkit-optimize-contrast; /* Faster rendering */
+            image-rendering: crisp-edges; /* Faster rendering */
+            image-rendering: pixelated; /* Fastest rendering mode */
         }
 
         .info-panel {
@@ -96,6 +108,9 @@
             border: 2px solid #fff;
             border-radius: 5px;
             font-weight: bold;
+            font-size: 12px;
+            max-width: 250px;
+            text-align: center;
         }
 
         #connectionStatus.connected {
@@ -113,8 +128,11 @@
     <div id="connectionStatus">DISCONNECTED</div>
 
     <div class="video-container">
-        <h2>GLAUCOGUARD - LIVE FEED</h2>
-        <video id="video" autoplay></video>
+        <h2>GLAUCOGUARD - LIVE FEED (Phone Camera)</h2>
+        <img id="video" style="width: 100%; border: 2px solid #00ff00; background: #000; min-height: 200px;" />
+        <div id="noVideoMessage" style="display: none; text-align: center; color: #00ff00; padding: 20px; font-family: 'Courier New', monospace;">
+            No video stream. Start streaming from your phone.
+        </div>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
@@ -154,6 +172,7 @@
         let ws = null;
         let detectionCount = 0;
         let reconnectInterval = null;
+        let phoneConnected = false; // Track if phone is connected
 
         function connectWebSocket() {
             // Connect to WebSocket server (adjust port as needed)
@@ -161,9 +180,12 @@
 
             ws.onopen = function() {
                 console.log('Connected to GlaucoGuard server');
-                document.getElementById('connectionStatus').textContent = 'CONNECTED';
-                document.getElementById('connectionStatus').classList.add('connected');
-                document.getElementById('status').textContent = 'ACTIVE';
+                updateConnectionStatus();
+                document.getElementById('status').textContent = 'READY';
+                // Keep detection paused until streaming starts
+                pauseDetectionUpdates = true;
+                isStreaming = false;
+                phoneConnected = false; // Phone not connected yet
 
                 if (reconnectInterval) {
                     clearInterval(reconnectInterval);
@@ -174,7 +196,62 @@
             ws.onmessage = function(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    handleDetectionData(data);
+                    
+                    // Handle video frames from mobile camera
+                    if (data.type === 'video_frame' && data.data) {
+                        console.log('Video frame received');
+                        // Phone is connected and streaming
+                        phoneConnected = true;
+                        updateConnectionStatus();
+                        // Resume detection updates when streaming starts
+                        pauseDetectionUpdates = false;
+                        // Set streaming flag and process frame
+                        isStreaming = true;
+                        displayVideoFrame(data.data);
+                    } else if (data.type === 'stop_streaming') {
+                        console.log('*** STOP STREAMING RECEIVED - PAUSING VIDEO AND DETECTION ***');
+                        // Immediately stop processing and clear video
+                        isStreaming = false;
+                        pauseDetectionUpdates = true; // Pause detection updates
+                        latestFrame = null; // Clear latest frame
+                        isProcessingFrame = false;
+                        clearVideoFrame();
+                        console.log('Video cleared, isStreaming:', isStreaming);
+                        console.log('Detection updates paused:', pauseDetectionUpdates);
+                    } else if (data.type === 'phone_disconnected') {
+                        console.log('*** PHONE DISCONNECTED - CLEARING VIDEO AND PAUSING ***');
+                        // Phone disconnected - clear everything
+                        phoneConnected = false;
+                        updateConnectionStatus();
+                        isStreaming = false;
+                        pauseDetectionUpdates = true; // Pause detection updates
+                        latestFrame = null; // Clear latest frame
+                        isProcessingFrame = false;
+                        clearVideoFrame();
+                        
+                        // Update status to show phone disconnected
+                        const statusEl = document.getElementById('status');
+                        if (statusEl) {
+                            statusEl.textContent = 'PHONE DISCONNECTED';
+                        }
+                        console.log('Phone disconnected - video cleared');
+                    } else if (data.type === 'connection') {
+                        // Connection message - ignore
+                        console.log('Connection message:', data.message);
+                    } else {
+                        // Handle detection data (messages without 'type' field or with detection/zones)
+                        // CRITICAL: Only process if streaming is active and not paused
+                        if (data.detection !== undefined || data.zones !== undefined) {
+                            // This is detection data - check if we should process it
+                            if (pauseDetectionUpdates || !isStreaming) {
+                                // Ignore detection data when paused or not streaming
+                                console.log('*** DETECTION DATA IGNORED - pauseDetectionUpdates:', pauseDetectionUpdates, 'isStreaming:', isStreaming);
+                                return; // Don't process detection data - exit early
+                            }
+                            // Process detection data only if streaming and not paused
+                            handleDetectionData(data);
+                        }
+                    }
                 } catch (e) {
                     console.error('Error parsing message:', e);
                 }
@@ -186,9 +263,12 @@
 
             ws.onclose = function() {
                 console.log('Disconnected from server');
-                document.getElementById('connectionStatus').textContent = 'DISCONNECTED';
-                document.getElementById('connectionStatus').classList.remove('connected');
+                phoneConnected = false;
+                updateConnectionStatus();
                 document.getElementById('status').textContent = 'OFFLINE';
+                clearVideoFrame(); // Clear video when disconnected
+                isStreaming = false; // Ensure streaming flag is reset
+                pauseDetectionUpdates = true; // Pause detection updates when disconnected
 
                 // Attempt to reconnect every 3 seconds
                 if (!reconnectInterval) {
@@ -197,6 +277,25 @@
             };
         }
 
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (!statusEl) return;
+            
+            if (ws && ws.readyState === 1) {
+                // Web browser is connected to server
+                if (phoneConnected) {
+                    statusEl.textContent = 'PHONE CONNECTED';
+                    statusEl.classList.add('connected');
+                } else {
+                    statusEl.textContent = 'SERVER CONNECTED (NO PHONE)';
+                    statusEl.classList.remove('connected');
+                }
+            } else {
+                statusEl.textContent = 'DISCONNECTED';
+                statusEl.classList.remove('connected');
+            }
+        }
+        
         function handleDetectionData(data) {
             // Update detection count
             if (data.detection) {
@@ -230,22 +329,110 @@
             }
         }
 
-        // Initialize camera access
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480 }
-                });
-                document.getElementById('video').srcObject = stream;
-            } catch (err) {
-                console.error('Error accessing camera:', err);
-                document.getElementById('video').style.display = 'none';
+        // Display video frame from mobile camera with optimization
+        let lastFrameTime = 0;
+        const targetFPS = 120; // Target 120 FPS display for maximum smoothness
+        const frameInterval = 1000 / targetFPS; // ~8ms between frames (minimal throttling)
+        let isStreaming = false;
+        let latestFrame = null; // Store only the latest frame for minimal latency
+        let isProcessingFrame = false;
+        let pauseDetectionUpdates = true; // Start with detection paused - only show when streaming
+        
+        function displayVideoFrame(base64Data) {
+            // Double check streaming status before processing
+            if (!isStreaming) {
+                return; // Don't display if not streaming
+            }
+            
+            // Store latest frame (always overwrite for minimal latency)
+            latestFrame = base64Data;
+            
+            // Process immediately - no waiting
+            if (isStreaming) {
+                updateFrameImmediately();
+            }
+        }
+        
+        function updateFrameImmediately() {
+            // Stop processing if not streaming
+            if (!isStreaming || !latestFrame) {
+                return;
+            }
+            
+            const base64Data = latestFrame;
+            const video = document.getElementById('video');
+            
+            if (video && base64Data) {
+                showVideoFrame(); // Show video element
+                // Direct assignment - no requestAnimationFrame delay for maximum speed
+                video.src = 'data:image/jpeg;base64,' + base64Data;
+            }
+        }
+        
+        // Legacy function name for compatibility
+        function processFrameQueue() {
+            updateFrameImmediately();
+        }
+        
+        function clearVideoFrame() {
+            console.log('*** CLEARING VIDEO FRAME - PAUSING VIDEO AND DETECTION ***');
+            // Immediately stop all processing
+            isStreaming = false;
+            pauseDetectionUpdates = true; // Pause detection updates
+            latestFrame = null; // Clear latest frame
+            isProcessingFrame = false;
+            
+            const video = document.getElementById('video');
+            const noVideoMsg = document.getElementById('noVideoMessage');
+            
+            if (!video) {
+                console.error('Video element not found!');
+                return;
+            }
+            
+            // Clear the image immediately - use multiple methods to ensure it clears
+            video.src = '';
+            video.removeAttribute('src');
+            video.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+            video.style.display = 'none';
+            
+            if (noVideoMsg) {
+                noVideoMsg.style.display = 'block';
+                console.log('No video message displayed');
+            } else {
+                console.error('No video message element not found!');
+            }
+            
+            // Update status to show paused
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = 'PAUSED';
+            }
+            
+            // Clear all detection zones to show they're paused
+            updateZone('left', null);
+            updateZone('center', null);
+            updateZone('right', null);
+            document.getElementById('detectionCount').textContent = '0';
+            document.getElementById('hapticStatus').textContent = 'PAUSED';
+            
+            console.log('Video cleared. Video display:', video.style.display);
+            console.log('isStreaming flag:', isStreaming);
+            console.log('Detection updates paused:', pauseDetectionUpdates);
+        }
+        
+        function showVideoFrame() {
+            const video = document.getElementById('video');
+            const noVideoMsg = document.getElementById('noVideoMessage');
+            video.style.display = 'block';
+            if (noVideoMsg) {
+                noVideoMsg.style.display = 'none';
             }
         }
 
         // Start the application
         window.onload = function() {
-            initCamera();
+            // Don't initialize local camera - we'll use phone camera instead
             connectWebSocket();
         };
     </script>

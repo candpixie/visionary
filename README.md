@@ -6,6 +6,7 @@ A real-time obstacle detection system with haptic feedback, designed for visual 
 
 - **Real-time Detection**: Monitor three zones (LEFT, CENTER, RIGHT) for obstacles
 - **WebSocket Communication**: Low-latency real-time data streaming
+- **Phone Camera Support**: Stream camera feed from your phone using Expo Go
 - **Dual Interface**:
   - Web UI with live video feed and visual alerts
   - Terminal UI for quick status monitoring
@@ -21,8 +22,13 @@ glaucogauard/
 │   └── terminal_ui.py     # Terminal-based monitoring interface
 ├── web/
 │   └── index.html         # Web-based UI with live feed
+├── mobile/                # Expo app for phone camera streaming
+│   ├── App.js             # React Native camera app
+│   ├── package.json       # Mobile app dependencies
+│   └── README.md          # Mobile app setup guide
 ├── requirements.txt       # Python dependencies
-└── README.md             # This file
+├── README.md             # This file
+└── SETUP_PHONE_CAMERA.md  # Phone camera setup guide
 ```
 
 ## Quick Start
@@ -44,11 +50,23 @@ The WebSocket server will start on `ws://localhost:8765`
 ### 3. Open the Web UI
 
 Open `web/index.html` in a modern web browser. The UI will:
-- Request camera access (allow for live feed)
 - Automatically connect to the WebSocket server
 - Display real-time detection data
+- Show video feed from phone camera (if connected)
 
-### 4. Or Use the Terminal UI
+### 4. (Optional) Connect Phone Camera
+
+To stream your phone's camera to the laptop:
+
+1. See `SETUP_PHONE_CAMERA.md` for detailed instructions
+2. Quick steps:
+   - Find your laptop's IP address
+   - Update `mobile/App.js` with your IP
+   - Install dependencies: `cd mobile && npm install`
+   - Run: `npm start` and scan QR code with Expo Go
+   - Connect and start streaming from the phone app
+
+### 5. Or Use the Terminal UI
 
 For a lightweight monitoring interface:
 

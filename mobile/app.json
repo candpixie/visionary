@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "GlaucoGuard Camera",
+    "slug": "glaucoguard-camera",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a1a1a"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.glaucoguard.camera"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1a1a1a"
+      },
+      "permissions": [
+        "CAMERA"
+      ],
+      "package": "com.glaucoguard.camera"
+    },
+    "web": {
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow GlaucoGuard to access your camera to stream video to your laptop."
+        }
+      ]
+    ]
+  }
+}
+
