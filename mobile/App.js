@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform, Image } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import HomeScreen from './components/HomeScreen';
+import SignInScreen from './components/SignInScreen';
 
 // WebSocket connection for streaming
 let ws = null;
@@ -10,7 +11,7 @@ let frameInterval = null;
 let isCapturing = false; // Flag to prevent concurrent captures
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('home'); // 'home' or 'camera'
+  const [currentScreen, setCurrentScreen] = useState('home'); // 'home', 'signin', or 'camera'
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -203,6 +204,10 @@ export default function App() {
     setCurrentScreen('camera');
   };
 
+  const handleNavigateToSignIn = () => {
+    setCurrentScreen('signin');
+  };
+
   const handleNavigateToHome = () => {
     // Stop streaming and disconnect when going back to home
     if (isStreaming) {
@@ -214,9 +219,21 @@ export default function App() {
     setCurrentScreen('home');
   };
 
+  const handleSignIn = () => {
+    // TODO: Implement actual sign in logic
+    // For now, just navigate to camera screen
+    console.log('Sign in successful');
+    setCurrentScreen('camera');
+  };
+
   // Show home screen
   if (currentScreen === 'home') {
-    return <HomeScreen onNavigateToCamera={handleNavigateToCamera} />;
+    return <HomeScreen onNavigateToCamera={handleNavigateToCamera} onNavigateToSignIn={handleNavigateToSignIn} />;
+  }
+
+  // Show sign in screen
+  if (currentScreen === 'signin') {
+    return <SignInScreen onSignIn={handleSignIn} onBack={handleNavigateToHome} />;
   }
 
   // Camera permission checks
@@ -249,7 +266,14 @@ export default function App() {
       <StatusBar style="light" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>GLAUCOGUARD CAMERA</Text>
+        <View style={styles.headerLeft}>
+          <Image 
+            source={require('./assets/logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>GLAUCOGUARD</Text>
+        </View>
         <View style={[styles.statusIndicator, isConnected && styles.statusConnected]}>
           <Text style={styles.statusText}>
             {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
@@ -323,20 +347,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+  },
   title: {
-    color: '#00ff00',
+    color: '#0080ff',
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'monospace',
+    textShadowColor: '#0066ff',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   statusIndicator: {
-    backgroundColor: '#ff0000',
+    backgroundColor: '#660000',
     paddingHorizontal: 15,
     paddingVertical: 5,
     borderRadius: 5,
   },
   statusConnected: {
-    backgroundColor: '#00ff00',
+    backgroundColor: '#0080ff',
   },
   statusText: {
     color: '#000',
@@ -358,7 +395,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   startButton: {
-    backgroundColor: '#00ff00',
+    backgroundColor: '#0080ff',
+    borderWidth: 1,
+    borderColor: '#3399ff',
+    shadowColor: '#0066ff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   stopButton: {
     backgroundColor: '#ff0000',
@@ -380,7 +423,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0a0a',
   },
   infoText: {
-    color: '#00ff00',
+    color: '#0080ff',
     fontSize: 12,
     fontFamily: 'monospace',
     marginBottom: 5,
@@ -392,7 +435,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   helpText: {
-    color: '#00ff00',
+    color: '#0080ff',
     fontSize: 14,
     textAlign: 'center',
   },

@@ -1,10 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 
-export default function HomeScreen({ onNavigateToCamera }) {
+export default function HomeScreen({ onNavigateToCamera, onNavigateToSignIn }) {
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#000000', '#001122', '#003366', '#000000']}
+      locations={[0, 0.3, 0.7, 1]}
+      style={styles.container}
+    >
       <StatusBar style="light" />
       
       {/* Header */}
@@ -15,8 +20,12 @@ export default function HomeScreen({ onNavigateToCamera }) {
 
       {/* Main Content */}
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>👁️</Text>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../assets/logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         
         <Text style={styles.welcomeText}>Welcome</Text>
@@ -29,13 +38,16 @@ export default function HomeScreen({ onNavigateToCamera }) {
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={styles.primaryButton}
-          onPress={onNavigateToCamera}
+          onPress={onNavigateToSignIn}
         >
-          <Text style={styles.primaryButtonText}>Start Camera</Text>
+          <Text style={styles.primaryButtonText}>Sign In</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>Settings</Text>
+        <TouchableOpacity 
+          style={styles.secondaryButton}
+          onPress={onNavigateToCamera}
+        >
+          <Text style={styles.secondaryButtonText}>Get Started</Text>
         </TouchableOpacity>
       </View>
 
@@ -43,14 +55,13 @@ export default function HomeScreen({ onNavigateToCamera }) {
       <View style={styles.footer}>
         <Text style={styles.footerText}>Version 1.0.0</Text>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
     paddingTop: 50,
   },
   header: {
@@ -61,9 +72,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#00ff00',
+    color: '#0080ff',
     fontFamily: 'monospace',
     letterSpacing: 2,
+    textShadowColor: '#0066ff',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   subtitle: {
     fontSize: 16,
@@ -77,11 +91,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
   },
-  iconContainer: {
+  logoContainer: {
     marginBottom: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  icon: {
-    fontSize: 80,
+  logo: {
+    width: 120,
+    height: 120,
   },
   welcomeText: {
     fontSize: 28,
@@ -100,16 +117,18 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   primaryButton: {
-    backgroundColor: '#00ff00',
+    backgroundColor: '#0080ff',
     paddingVertical: 18,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#00ff00',
+    shadowColor: '#0066ff',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#3399ff',
   },
   primaryButtonText: {
     color: '#000',
