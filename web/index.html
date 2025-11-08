@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GLAUCOGUARD - Detection System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .video-container {
+            flex: 2;
+            margin-right: 20px;
+        }
+
+        video {
+            width: 100%;
+            border: 2px solid #00ff00;
+            background: #000;
+        }
+
+        .info-panel {
+            flex: 1;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            min-width: 300px;
+        }
+
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+
+        .zone {
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #333;
+            border-radius: 5px;
+            font-size: 20px;
+            text-align: center;
+            background: #0a0a0a;
+            transition: all 0.3s;
+        }
+
+        .zone.active {
+            background: #ff0000;
+            border-color: #ff0000;
+            animation: pulse 0.5s infinite;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .status {
+            margin: 20px 0;
+            font-size: 18px;
+        }
+
+        .status strong {
+            display: inline-block;
+            width: 150px;
+        }
+
+        .distance-bar {
+            height: 30px;
+            background: #333;
+            margin: 10px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .distance-fill {
+            height: 100%;
+            background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
+            transition: width 0.3s;
+        }
+
+        #connectionStatus {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #ff0000;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        #connectionStatus.connected {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .zone-distance {
+            font-size: 16px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="connectionStatus">DISCONNECTED</div>
+
+    <div class="video-container">
+        <h2>GLAUCOGUARD - LIVE FEED</h2>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+    <div class="info-panel">
+        <h2>DETECTION STATUS</h2>
+
+        <div id="leftZone" class="zone">
+            ← LEFT ZONE<br>
+            <span id="leftDist" class="zone-distance">--</span>
+        </div>
+
+        <div id="centerZone" class="zone">
+            ↑ CENTER ZONE<br>
+            <span id="centerDist" class="zone-distance">--</span>
+        </div>
+
+        <div id="rightZone" class="zone">
+            RIGHT ZONE →<br>
+            <span id="rightDist" class="zone-distance">--</span>
+        </div>
+
+        <div class="status">
+            <strong>SYSTEM STATUS:</strong> <span id="status">INITIALIZING</span>
+        </div>
+
+        <div class="status">
+            <strong>DETECTIONS:</strong> <span id="detectionCount">0</span>
+        </div>
+
+        <div class="status">
+            <strong>HAPTIC STATUS:</strong> <span id="hapticStatus">READY</span>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection to backend
+        let ws = null;
+        let detectionCount = 0;
+        let reconnectInterval = null;
+
+        function connectWebSocket() {
+            // Connect to WebSocket server (adjust port as needed)
+            ws = new WebSocket('ws://localhost:8765');
+
+            ws.onopen = function() {
+                console.log('Connected to GlaucoGuard server');
+                document.getElementById('connectionStatus').textContent = 'CONNECTED';
+                document.getElementById('connectionStatus').classList.add('connected');
+                document.getElementById('status').textContent = 'ACTIVE';
+
+                if (reconnectInterval) {
+                    clearInterval(reconnectInterval);
+                    reconnectInterval = null;
+                }
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleDetectionData(data);
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = function() {
+                console.log('Disconnected from server');
+                document.getElementById('connectionStatus').textContent = 'DISCONNECTED';
+                document.getElementById('connectionStatus').classList.remove('connected');
+                document.getElementById('status').textContent = 'OFFLINE';
+
+                // Attempt to reconnect every 3 seconds
+                if (!reconnectInterval) {
+                    reconnectInterval = setInterval(connectWebSocket, 3000);
+                }
+            };
+        }
+
+        function handleDetectionData(data) {
+            // Update detection count
+            if (data.detection) {
+                detectionCount++;
+                document.getElementById('detectionCount').textContent = detectionCount;
+            }
+
+            // Update zones
+            if (data.zones) {
+                updateZone('left', data.zones.left);
+                updateZone('center', data.zones.center);
+                updateZone('right', data.zones.right);
+            }
+
+            // Update haptic status
+            if (data.haptic) {
+                document.getElementById('hapticStatus').textContent = data.haptic.toUpperCase();
+            }
+        }
+
+        function updateZone(zone, distance) {
+            const zoneEl = document.getElementById(zone + 'Zone');
+            const distEl = document.getElementById(zone + 'Dist');
+
+            if (distance !== null && distance < 200) {
+                zoneEl.classList.add('active');
+                distEl.textContent = distance + ' cm';
+            } else {
+                zoneEl.classList.remove('active');
+                distEl.textContent = distance !== null ? distance + ' cm' : 'CLEAR';
+            }
+        }
+
+        // Initialize camera access
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 }
+                });
+                document.getElementById('video').srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                document.getElementById('video').style.display = 'none';
+            }
+        }
+
+        // Start the application
+        window.onload = function() {
+            initCamera();
+            connectWebSocket();
+        };
+    </script>
+</body>
+</html>
