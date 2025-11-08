@@ -4,6 +4,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
 import HomeScreen from './components/HomeScreen';
 import SignInScreen from './components/SignInScreen';
+import CreateAccountScreen from './components/CreateAccountScreen';
+import AssessmentScreen from './components/AssessmentScreen';
 
 // WebSocket connection for streaming
 let ws = null;
@@ -11,7 +13,7 @@ let frameInterval = null;
 let isCapturing = false; // Flag to prevent concurrent captures
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState('home'); // 'home', 'signin', or 'camera'
+  const [currentScreen, setCurrentScreen] = useState('home'); // 'home', 'signin', 'createaccount', 'assessment', or 'camera'
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -208,6 +210,10 @@ export default function App() {
     setCurrentScreen('signin');
   };
 
+  const handleNavigateToCreateAccount = () => {
+    setCurrentScreen('createaccount');
+  };
+
   const handleNavigateToHome = () => {
     // Stop streaming and disconnect when going back to home
     if (isStreaming) {
@@ -221,19 +227,43 @@ export default function App() {
 
   const handleSignIn = () => {
     // TODO: Implement actual sign in logic
-    // For now, just navigate to camera screen
+    // Navigate to assessment screen
     console.log('Sign in successful');
+    setCurrentScreen('assessment');
+  };
+
+  const handleCreateAccount = () => {
+    // TODO: Implement actual account creation logic
+    // Navigate to assessment screen
+    console.log('Account created successfully');
+    setCurrentScreen('assessment');
+  };
+
+  const handleAssessmentComplete = (answers) => {
+    // TODO: Save assessment answers
+    console.log('Assessment completed with answers:', answers);
+    // Navigate to camera screen after assessment
     setCurrentScreen('camera');
   };
 
   // Show home screen
   if (currentScreen === 'home') {
-    return <HomeScreen onNavigateToCamera={handleNavigateToCamera} onNavigateToSignIn={handleNavigateToSignIn} />;
+    return <HomeScreen onNavigateToCamera={handleNavigateToCamera} onNavigateToSignIn={handleNavigateToSignIn} onNavigateToCreateAccount={handleNavigateToCreateAccount} />;
   }
 
   // Show sign in screen
   if (currentScreen === 'signin') {
-    return <SignInScreen onSignIn={handleSignIn} onBack={handleNavigateToHome} />;
+    return <SignInScreen onSignIn={handleSignIn} onBack={handleNavigateToHome} onNavigateToCreateAccount={handleNavigateToCreateAccount} />;
+  }
+
+  // Show create account screen
+  if (currentScreen === 'createaccount') {
+    return <CreateAccountScreen onCreateAccount={handleCreateAccount} onBack={handleNavigateToHome} onNavigateToSignIn={handleNavigateToSignIn} />;
+  }
+
+  // Show assessment screen
+  if (currentScreen === 'assessment') {
+    return <AssessmentScreen onComplete={handleAssessmentComplete} onBack={handleNavigateToHome} />;
   }
 
   // Camera permission checks
@@ -358,11 +388,11 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   title: {
-    color: '#0080ff',
+    color: '#00CED1',
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'monospace',
-    textShadowColor: '#0066ff',
+    textShadowColor: '#008B8B',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
   },
@@ -373,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   statusConnected: {
-    backgroundColor: '#0080ff',
+    backgroundColor: '#00CED1',
   },
   statusText: {
     color: '#000',
@@ -395,10 +425,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   startButton: {
-    backgroundColor: '#0080ff',
+    backgroundColor: '#00CED1',
     borderWidth: 1,
-    borderColor: '#3399ff',
-    shadowColor: '#0066ff',
+    borderColor: '#48D1CC',
+    shadowColor: '#008B8B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -423,7 +453,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0a0a',
   },
   infoText: {
-    color: '#0080ff',
+    color: '#00CED1',
     fontSize: 12,
     fontFamily: 'monospace',
     marginBottom: 5,
@@ -435,7 +465,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   helpText: {
-    color: '#0080ff',
+    color: '#00CED1',
     fontSize: 14,
     textAlign: 'center',
   },

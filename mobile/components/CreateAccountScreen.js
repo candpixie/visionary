@@ -3,22 +3,34 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Image } fro
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function SignInScreen({ onSignIn, onBack, onNavigateToCreateAccount }) {
+export default function CreateAccountScreen({ onCreateAccount, onBack, onNavigateToSignIn }) {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleSignIn = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
+  const handleCreateAccount = () => {
+    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
     
-    // TODO: Implement actual sign in logic
-    console.log('Sign in attempt:', { email, password });
+    // TODO: Implement actual account creation logic
+    console.log('Create account attempt:', { name, email, password });
     
     // For now, just call the callback
-    if (onSignIn) {
-      onSignIn();
+    if (onCreateAccount) {
+      onCreateAccount();
     }
   };
 
@@ -41,7 +53,7 @@ export default function SignInScreen({ onSignIn, onBack, onNavigateToCreateAccou
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.title}>Sign In</Text>
+          <Text style={styles.title}>Create Account</Text>
         </View>
         <View style={styles.placeholder} />
       </View>
@@ -49,6 +61,19 @@ export default function SignInScreen({ onSignIn, onBack, onNavigateToCreateAccou
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name"
+              placeholderTextColor="#666"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -77,16 +102,26 @@ export default function SignInScreen({ onSignIn, onBack, onNavigateToCreateAccou
             />
           </View>
 
-          <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-            <Text style={styles.signInButtonText}>Sign In</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm your password"
+              placeholderTextColor="#666"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.createButton} onPress={handleCreateAccount}>
+            <Text style={styles.createButtonText}>Create Account</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.createAccountLink} onPress={onNavigateToCreateAccount}>
-            <Text style={styles.createAccountLinkText}>Don't have an account? Create Account</Text>
+          <TouchableOpacity style={styles.signInLink} onPress={onNavigateToSignIn}>
+            <Text style={styles.signInLinkText}>Already have an account? Sign In</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -159,7 +194,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#004D4D',
   },
-  signInButton: {
+  createButton: {
     backgroundColor: '#00CED1',
     paddingVertical: 18,
     borderRadius: 10,
@@ -173,28 +208,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#48D1CC',
   },
-  signInButtonText: {
+  createButtonText: {
     color: '#000',
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'monospace',
   },
-  forgotPassword: {
+  signInLink: {
     alignItems: 'center',
     marginTop: 20,
   },
-  forgotPasswordText: {
+  signInLinkText: {
     color: '#888',
     fontSize: 14,
-  },
-  createAccountLink: {
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  createAccountLinkText: {
-    color: '#00CED1',
-    fontSize: 14,
-    textDecorationLine: 'underline',
   },
 });
 

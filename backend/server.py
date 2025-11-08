@@ -35,7 +35,7 @@ class GlaucoGuardServer:
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Mobile client (camera) connected. Total mobile clients: {len(self.mobile_clients)}")
             # Don't set streaming_active here - wait for first video frame
         else:
-        self.clients.add(websocket)
+            self.clients.add(websocket)
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Web client connected. Total web clients: {len(self.clients)}")
 
     async def unregister_client(self, websocket: websockets.WebSocketServerProtocol):
@@ -64,7 +64,7 @@ class GlaucoGuardServer:
             except Exception as e:
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] Error notifying web clients of phone disconnect: {e}")
         else:
-        self.clients.discard(websocket)
+            self.clients.discard(websocket)
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Web client disconnected. Total web clients: {len(self.clients)}")
         self.client_types.pop(websocket, None)
 
@@ -187,8 +187,8 @@ class GlaucoGuardServer:
                 # Double-check that at least one client is actually streaming (safety check)
                 any_client_streaming = any(self.client_streaming.get(client, False) for client in self.mobile_clients)
                 if any_client_streaming:
-            data = self.simulate_detection()
-            await self.broadcast(data)
+                    data = self.simulate_detection()
+                    await self.broadcast(data)
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] Detection data sent to {len(self.clients)} web client(s) (streaming_active: {self.streaming_active}, explicitly_stopped: {self.explicitly_stopped}, any_client_streaming: {any_client_streaming})")
                 else:
                     # Safety check: if streaming_active is True but no clients are streaming, reset it
@@ -205,11 +205,11 @@ class GlaucoGuardServer:
         try:
             # Send initial connection confirmation
             try:
-            await websocket.send(json.dumps({
-                "type": "connection",
-                "status": "connected",
-                "message": "Connected to GlaucoGuard server"
-            }))
+                await websocket.send(json.dumps({
+                    "type": "connection",
+                    "status": "connected",
+                    "message": "Connected to GlaucoGuard server"
+                }))
             except Exception as e:
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] Error sending initial message: {e}")
                 return

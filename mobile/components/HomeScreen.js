@@ -3,10 +3,10 @@ import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function HomeScreen({ onNavigateToCamera, onNavigateToSignIn }) {
+export default function HomeScreen({ onNavigateToCamera, onNavigateToSignIn, onNavigateToCreateAccount }) {
   return (
     <LinearGradient
-      colors={['#000000', '#001122', '#003366', '#000000']}
+      colors={['#000000', '#001919', '#004D4D', '#000000']}
       locations={[0, 0.3, 0.7, 1]}
       style={styles.container}
     >
@@ -45,7 +45,7 @@ export default function HomeScreen({ onNavigateToCamera, onNavigateToSignIn }) {
 
         <TouchableOpacity 
           style={styles.secondaryButton}
-          onPress={onNavigateToCamera}
+          onPress={onNavigateToCreateAccount}
         >
           <Text style={styles.secondaryButtonText}>Get Started</Text>
         </TouchableOpacity>
@@ -72,10 +72,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#0080ff',
+    color: '#00CED1',
     fontFamily: 'monospace',
     letterSpacing: 2,
-    textShadowColor: '#0066ff',
+    textShadowColor: '#008B8B',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
@@ -117,18 +117,18 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   primaryButton: {
-    backgroundColor: '#0080ff',
+    backgroundColor: '#00CED1',
     paddingVertical: 18,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#0066ff',
+    shadowColor: '#008B8B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 5,
     borderWidth: 1,
-    borderColor: '#3399ff',
+    borderColor: '#48D1CC',
   },
   primaryButtonText: {
     color: '#000',
