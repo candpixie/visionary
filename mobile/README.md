@@ -1,6 +1,6 @@
-# GlaucoGuard Mobile Camera App
+# Visionary Mobile Camera App
 
-This Expo app allows you to stream your phone's camera feed to the GlaucoGuard server running on your laptop.
+This Expo app allows you to stream your phone's camera feed to the Visionary server running on your laptop.
 
 ## Setup Instructions
 
@@ -27,7 +27,7 @@ Before running the app, you need to update the server URL in `App.js`:
 
 ### 3. Start the Backend Server
 
-On your laptop, make sure the GlaucoGuard server is running:
+On your laptop, make sure the Visionary server is running:
 
 ```bash
 python backend/server.py

@@ -1,8 +1,8 @@
 #!/bin/bash
-# GlaucoGuard Server Startup Script
+# Visionary Server Startup Script
 
 echo "========================================="
-echo "  GLAUCOGUARD DETECTION SYSTEM"
+echo "  VISIONARY DETECTION SYSTEM"
 echo "========================================="
 echo ""
 
@@ -18,7 +18,7 @@ if ! python3 -c "import websockets" &> /dev/null; then
     pip install -r requirements.txt
 fi
 
-echo "Starting GlaucoGuard server..."
+echo "Starting Visionary server..."
 echo ""
 echo "Web UI: Open web/index.html in your browser"
 echo "Server: ws://localhost:8765"

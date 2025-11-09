@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "GlaucoGuard Camera",
-    "slug": "glaucoguard-camera",
+    "name": "Visionary Camera",
+    "slug": "visionary-camera",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
@@ -14,7 +14,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.glaucoguard.camera"
+      "bundleIdentifier": "com.visionary.camera"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +23,7 @@
       "permissions": [
         "CAMERA"
       ],
-      "package": "com.glaucoguard.camera"
+      "package": "com.visionary.camera"
     },
     "web": {
     },
@@ -31,7 +31,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow GlaucoGuard to access your camera to stream video to your laptop."
+          "cameraPermission": "Allow Visionary to access your camera to stream video to your laptop."
         }
       ]
     ]

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GlaucoGuard Terminal UI
+Visionary Terminal UI
 Simple terminal-based interface for obstacle detection monitoring
 """
 
@@ -12,7 +12,7 @@ import os
 
 
 class TerminalUI:
-    """Terminal-based UI for GlaucoGuard detection system"""
+    """Terminal-based UI for Visionary detection system"""
 
     def __init__(self):
         self.detection_count = 0
@@ -64,7 +64,7 @@ class TerminalUI:
         right_status, right_info = self.get_zone_status(right_dist)
 
         print("=" * 60)
-        print("          GLAUCOGUARD STATUS")
+        print("          VISIONARY STATUS")
         print("=" * 60)
         print(f"  LEFT:   {left_status:20} {left_info}")
         print(f"  CENTER: {center_status:20} {center_info}")
@@ -78,7 +78,7 @@ class TerminalUI:
 
     async def run(self):
         """Run the terminal UI"""
-        print("Starting GlaucoGuard Terminal UI...")
+        print("Starting Visionary Terminal UI...")
         await asyncio.sleep(1)
 
         try:
@@ -88,7 +88,7 @@ class TerminalUI:
                 await asyncio.sleep(0.5)
         except KeyboardInterrupt:
             self.clear_screen()
-            print("\nGlaucoGuard Terminal UI stopped.")
+            print("\nVisionary Terminal UI stopped.")
             sys.exit(0)
 
 

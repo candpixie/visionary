@@ -65,7 +65,7 @@ tasklist | findstr <PID>
 Get-NetTCPConnection | Where-Object {$_.State -eq "Listen"} | Select-Object LocalAddress, LocalPort, OwningProcess | Format-Table
 ```
 
-## For Your GlaucoGuard Project
+## For Your Visionary Project
 
 ### Your Current Configuration:
 

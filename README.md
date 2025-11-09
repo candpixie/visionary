@@ -1,4 +1,4 @@
-# GlaucoGuard Detection System
+# Visionary Detection System
 
 A real-time obstacle detection system with haptic feedback, designed for visual assistance applications.
 
@@ -98,7 +98,7 @@ The web interface provides:
 Simple text-based interface showing:
 
 ```
-=== GLAUCOGUARD STATUS ===
+=== VISIONARY STATUS ===
 LEFT:   🔴 OBSTACLE DETECTED (120cm)
 CENTER: ✅ CLEAR
 RIGHT:  ✅ CLEAR
@@ -171,7 +171,7 @@ Currently, the server accepts client commands for future expansion:
 Edit `backend/server.py`:
 
 ```python
-server = GlaucoGuardServer(
+server = VisionaryServer(
     host="localhost",  # Change to "0.0.0.0" for network access
     port=8765          # Change port if needed
 )

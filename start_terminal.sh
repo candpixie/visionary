@@ -1,7 +1,7 @@
 #!/bin/bash
-# GlaucoGuard Terminal UI Startup Script
+# Visionary Terminal UI Startup Script
 
-echo "Starting GlaucoGuard Terminal UI..."
+echo "Starting Visionary Terminal UI..."
 sleep 1
 
 # Start the terminal UI

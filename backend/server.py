@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GlaucoGuard Detection Server
+Visionary Detection Server
 WebSocket server for real-time obstacle detection and haptic feedback
 """
 
@@ -12,8 +12,8 @@ from datetime import datetime
 from typing import Set, Dict, Any
 
 
-class GlaucoGuardServer:
-    """Main server class for GlaucoGuard detection system"""
+class VisionaryServer:
+    """Main server class for Visionary detection system"""
 
     def __init__(self, host: str = "0.0.0.0", port: int = 8765):
         self.host = host
@@ -208,7 +208,7 @@ class GlaucoGuardServer:
                 await websocket.send(json.dumps({
                     "type": "connection",
                     "status": "connected",
-                    "message": "Connected to GlaucoGuard server"
+                    "message": "Connected to Visionary server"
                 }))
             except Exception as e:
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] Error sending initial message: {e}")
@@ -384,7 +384,7 @@ class GlaucoGuardServer:
     async def start(self):
         """Start the WebSocket server"""
         print("=" * 50)
-        print("GLAUCOGUARD DETECTION SERVER")
+        print("VISIONARY DETECTION SERVER")
         print("=" * 50)
         print(f"Starting server on {self.host}:{self.port}")
         print("Note: Server is listening on 0.0.0.0 to accept connections from mobile devices")
@@ -405,7 +405,7 @@ class GlaucoGuardServer:
 
 async def main():
     """Main entry point"""
-    server = GlaucoGuardServer()
+    server = VisionaryServer()
     try:
         await server.start()
     except KeyboardInterrupt:

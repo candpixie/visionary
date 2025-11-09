@@ -10,9 +10,9 @@ export default function AssessmentScreen({ onComplete, onBack }) {
   const questions = [
     {
       id: 1,
-      question: "Have you been diagnosed with glaucoma?",
+      question: "Have you been diagnosed with any vision-related conditions?",
       options: [
-        "Yes, I have been diagnosed",
+        "Yes, I have been diagnosed with a vision condition",
         "No, I have not been diagnosed",
         "I'm not sure / I'm waiting for diagnosis",
         "I prefer not to answer"
@@ -20,7 +20,17 @@ export default function AssessmentScreen({ onComplete, onBack }) {
     },
     {
       id: 2,
-      question: "How would you describe your peripheral vision?",
+      question: "How would you describe your overall vision clarity?",
+      options: [
+        "Excellent - very clear",
+        "Good - mostly clear with minor issues",
+        "Fair - noticeable blurriness or distortion",
+        "Poor - significant vision impairment"
+      ]
+    },
+    {
+      id: 3,
+      question: "How would you describe your peripheral (side) vision?",
       options: [
         "Excellent - no issues",
         "Good - minor limitations",
@@ -29,7 +39,17 @@ export default function AssessmentScreen({ onComplete, onBack }) {
       ]
     },
     {
-      id: 3,
+      id: 4,
+      question: "How is your vision in low light or at night?",
+      options: [
+        "Excellent - no issues",
+        "Good - minor difficulty",
+        "Fair - noticeable difficulty",
+        "Poor - very difficult to see"
+      ]
+    },
+    {
+      id: 5,
       question: "What challenges do you face in daily navigation?",
       options: [
         "No significant challenges",
@@ -39,13 +59,33 @@ export default function AssessmentScreen({ onComplete, onBack }) {
       ]
     },
     {
-      id: 4,
-      question: "What is your primary goal with GlaucoGuard?",
+      id: 6,
+      question: "How often do you experience vision-related difficulties?",
+      options: [
+        "Rarely or never",
+        "Occasionally (a few times a week)",
+        "Frequently (daily or multiple times per day)",
+        "Constantly"
+      ]
+    },
+    {
+      id: 7,
+      question: "What is your primary goal with Visionary?",
       options: [
         "Early detection and prevention",
-        "Monitor existing condition",
+        "Monitor existing vision condition",
         "Improve daily navigation safety",
         "Track vision changes over time"
+      ]
+    },
+    {
+      id: 8,
+      question: "How has vision loss affected your daily activities?",
+      options: [
+        "No significant impact",
+        "Minor impact on some activities",
+        "Moderate impact on many activities",
+        "Severe impact requiring assistance"
       ]
     }
   ];

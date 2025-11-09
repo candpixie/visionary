@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GLAUCOGUARD - Detection System</title>
+    <title>VISIONARY - Detection System</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -142,7 +142,7 @@
 </head>
 <body>
     <div class="video-container">
-        <h2>GLAUCOGUARD - LIVE FEED (Phone Camera)</h2>
+        <h2>VISIONARY - LIVE FEED (Phone Camera)</h2>
         <img id="video" style="width: 100%; border: 2px solid #00CED1; background: #000; min-height: 200px; box-shadow: 0 0 20px rgba(0, 206, 209, 0.3);" />
         <div id="noVideoMessage" style="display: none; text-align: center; color: #00CED1; padding: 20px; font-family: monospace; text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);">
             No video stream. Start streaming from your phone.
@@ -195,7 +195,7 @@
             ws = new WebSocket('ws://localhost:8765');
 
             ws.onopen = function() {
-                console.log('Connected to GlaucoGuard server');
+                console.log('Connected to Visionary server');
                 updateConnectionStatus();
                 document.getElementById('status').textContent = 'READY';
                 // Keep detection paused until streaming starts

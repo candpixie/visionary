@@ -42,7 +42,7 @@ export default function App() {
         console.log('✅ Connected to server');
         setIsConnected(true);
         setIsConnecting(false);
-        Alert.alert('Connected', 'Successfully connected to GlaucoGuard server');
+        Alert.alert('Connected', 'Successfully connected to Visionary server');
       };
 
       ws.onerror = (error) => {
@@ -227,9 +227,9 @@ export default function App() {
 
   const handleSignIn = () => {
     // TODO: Implement actual sign in logic
-    // Navigate to assessment screen
+    // Navigate to camera screen
     console.log('Sign in successful');
-    setCurrentScreen('assessment');
+    setCurrentScreen('camera');
   };
 
   const handleCreateAccount = () => {
@@ -302,7 +302,7 @@ export default function App() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.title}>GLAUCOGUARD</Text>
+          <Text style={styles.title}>VISIONARY</Text>
         </View>
         <View style={[styles.statusIndicator, isConnected && styles.statusConnected]}>
           <Text style={styles.statusText}>
