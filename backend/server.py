@@ -1,3 +1,14 @@
+import time
+    async def speak_elevenlabs(self, text: str, voice: str = "alloy") -> Optional[str]:
+        """
+        Generate TTS for a warning and broadcast/play it (returns filename or None).
+        """
+        filename = await self.generate_tts(text, voice)
+        if filename:
+            # Optionally broadcast a message to clients with the audio URL
+            tts_url = f"http://{self.host}:8080/tts_audio/{filename}"
+            await self.broadcast({"type": "tts_warning", "text": text, "tts_url": tts_url})
+        return filename
 #!/usr/bin/env python3
 """
 GlaucoGuard Detection Server
@@ -249,9 +260,24 @@ class GlaucoGuardServer:
                 if any_client_streaming:
                     data = self.simulate_detection()
 
+                    # Example: Integrate camera detection and TTS warning for peripheral objects
+                    # Replace this with your actual detection results
+                    detections = [
+                        {"class": "person", "zone": "left"},
+                        {"class": "car", "zone": "center"}
+                    ]
+                    peripheral_objects = [obj for obj in detections if obj['zone'] in ['left', 'right']]
+                    # Use a persistent last_voice_time to avoid spamming
+                    if not hasattr(self, 'last_voice_time'):
+                        self.last_voice_time = 0
+                    if peripheral_objects and (time.time() - self.last_voice_time > 3):
+                        obj = peripheral_objects[0]
+                        warning = f"{obj['class']} on your {obj['zone']}"
+                        await self.speak_elevenlabs(warning)
+                        self.last_voice_time = time.time()
+
                     # If detection present, generate a short TTS message and attach a URL to the broadcast
                     if data.get("detection"):
-                        # Build a short descriptive message
                         parts = []
                         zones = data.get("zones", {})
                         for zone_name in ["left", "center", "right"]:
@@ -265,7 +291,6 @@ class GlaucoGuardServer:
 
                         filename = await self.generate_tts(tts_text)
                         if filename:
-                            # Expose via http static path /tts_audio/{filename}
                             data["tts_url"] = f"http://{self.host}:8080/tts_audio/{filename}"
 
                     await self.broadcast(data)
