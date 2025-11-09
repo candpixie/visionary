@@ -5,11 +5,15 @@ WebSocket server for real-time obstacle detection and haptic feedback
 """
 
 import asyncio
+import os
+import base64
 import websockets
 import json
 import random
 from datetime import datetime
+from pathlib import Path
 from typing import Set, Dict, Any
+from dotenv import load_dotenv
 
 
 class GlaucoGuardServer:
@@ -26,6 +30,10 @@ class GlaucoGuardServer:
         self.latest_frame: str = None  # Store latest video frame from phone
         self.streaming_active = False  # Track if mobile client is actively streaming
         self.explicitly_stopped = False  # Track if streaming was explicitly stopped (prevents re-enabling)
+        
+        # Setup backend/tmp directory for saving video frames
+        self.tmp_dir = Path(__file__).parent / "tmp"
+        self.tmp_dir.mkdir(exist_ok=True)
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol, is_mobile: bool = False):
         """Register a new client connection"""
@@ -77,6 +85,29 @@ class GlaucoGuardServer:
                 *[client.send(message_json) for client in target_clients],
                 return_exceptions=True
             )
+    
+    # def _save_frame_sync(self, frame_data: str) -> None:
+    #     """Synchronously save a video frame to /tmp directory"""
+    #     try:
+    #         # Decode base64 frame data
+    #         image_data = base64.b64decode(frame_data)
+            
+    #         # Generate filename with timestamp
+    #         timestamp = int(datetime.now().timestamp() * 1000)
+    #         filename = f"frame_{timestamp}.jpg"
+    #         filepath = self.tmp_dir / filename
+            
+    #         # Write frame to file
+    #         filepath.write_bytes(image_data)
+    #         print(f"[{datetime.now().strftime('%H:%M:%S')}] Saved video frame to {filepath}")
+    #     except Exception as e:
+    #         print(f"[{datetime.now().strftime('%H:%M:%S')}] Error saving video frame: {e}")
+    
+    # async def save_frame_async(self, frame_data: str) -> None:
+    #     """Asynchronously save a video frame to /tmp directory"""
+    #     # Run the synchronous save operation in a thread pool to avoid blocking
+    #     loop = asyncio.get_event_loop()
+    #     await loop.run_in_executor(None, self._save_frame_sync, frame_data)
     
     async def broadcast_video_frame(self, frame_data: str):
         """Broadcast video frame to all web clients - optimized for maximum speed"""
@@ -255,13 +286,19 @@ class GlaucoGuardServer:
                             websocket in self.mobile_clients and 
                             self.client_streaming.get(websocket, False)):
                             
+                            # # Get frame data
+                            # frame_data = data.get("data")
+                            
+                            # # Save frame to /tmp directory (non-blocking)
+                            # asyncio.create_task(self.save_frame_async(frame_data))
+                            
                             # CRITICAL: If explicitly stopped, NEVER re-enable detection, even if video frames arrive
                             # Check this FIRST before doing anything else
                             if self.explicitly_stopped:
                                 # Streaming was explicitly stopped - show video but NEVER enable detection
                                 print(f"[{datetime.now().strftime('%H:%M:%S')}] Received video_frame but explicitly_stopped=True - showing video but NOT enabling detection (streaming_active: {self.streaming_active})")
                                 # Update latest frame and broadcast to web clients (for display only)
-                                self.latest_frame = data.get("data")
+                                # self.latest_frame = frame_data
                                 try:
                                     await self.broadcast_video_frame(self.latest_frame)
                                 except Exception as e:
@@ -274,7 +311,7 @@ class GlaucoGuardServer:
                             else:
                                 # Not explicitly stopped - normal operation
                                 # Update latest frame and broadcast to web clients
-                                self.latest_frame = data.get("data")
+                                # self.latest_frame = frame_data
                                 try:
                                     await self.broadcast_video_frame(self.latest_frame)
                                 except Exception as e:
@@ -405,7 +442,16 @@ class GlaucoGuardServer:
 
 async def main():
     """Main entry point"""
-    server = GlaucoGuardServer()
+    load_dotenv()
+    # Get server configuration from environment or use defaults
+    host = os.getenv('IP_ADDRESS', '0.0.0.0')
+    port_str = os.getenv('PORT_NUM', '8765')
+    try:
+        port = int(port_str)
+    except (ValueError, TypeError):
+        port = 8765  # Default port if invalid
+    
+    server = GlaucoGuardServer(host=host, port=port)
     try:
         await server.start()
     except KeyboardInterrupt:

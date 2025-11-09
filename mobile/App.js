@@ -6,6 +6,7 @@ import HomeScreen from './components/HomeScreen';
 import SignInScreen from './components/SignInScreen';
 import CreateAccountScreen from './components/CreateAccountScreen';
 import AssessmentScreen from './components/AssessmentScreen';
+import { IP_ADDRESS, PORT_NUM } from '@env';
 
 // WebSocket connection for streaming
 let ws = null;
@@ -13,11 +14,15 @@ let frameInterval = null;
 let isCapturing = false; // Flag to prevent concurrent captures
 
 export default function App() {
+  
+  
   const [currentScreen, setCurrentScreen] = useState('home'); // 'home', 'signin', 'createaccount', 'assessment', or 'camera'
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [serverUrl, setServerUrl] = useState('ws://10.28.39.17:8765'); // Change to your laptop's IP
+  // Use environment variables or fallback to default
+  const [serverUrl, setServerUrl] = useState(`ws://${IP_ADDRESS}:${PORT_NUM}`);
+  console.log('Server URL:', serverUrl);
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
 

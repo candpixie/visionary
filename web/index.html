@@ -191,7 +191,15 @@
         let phoneConnected = false; // Track if phone is connected
 
         function connectWebSocket() {
-            // Connect to WebSocket server (adjust port as needed)
+            // Connect to WebSocket server
+            // Default to localhost:8765, but allow override via URL parameter
+            // const urlParams = new URLSearchParams(window.location.search);
+            // const wsHost = urlParams.get('host') || 'localhost';
+            // const wsPort = urlParams.get('port') || '8765';
+            // const wsUrl = `ws://${wsHost}:${wsPort}`;
+            
+            // console.log('Connecting to WebSocket:', wsUrl);
+            // ws = new WebSocket(wsUrl);
             ws = new WebSocket('ws://localhost:8765');
 
             ws.onopen = function() {
