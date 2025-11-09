@@ -6,6 +6,7 @@ import HomeScreen from './components/HomeScreen';
 import SignInScreen from './components/SignInScreen';
 import CreateAccountScreen from './components/CreateAccountScreen';
 import AssessmentScreen from './components/AssessmentScreen';
+import { SERVER_IP, SERVER_PORT } from '@env';
 
 // WebSocket connection for streaming
 let ws = null;
@@ -17,7 +18,8 @@ export default function App() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [serverUrl, setServerUrl] = useState('ws://10.28.39.17:8765'); // Change to your laptop's IP
+  // Use environment variables from mobile/.env
+  const [serverUrl, setServerUrl] = useState(`ws://${SERVER_IP}:${SERVER_PORT}`);
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
