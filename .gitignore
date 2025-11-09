@@ -1,6 +1,8 @@
 
 .env
 yolo_env/
+venv/
+flask_env/
 tmp/
 output/
 yolov8n-seg.pt

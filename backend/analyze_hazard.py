@@ -13,6 +13,10 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 from elevenlabs.play import play
+import pyaudio
+import wave
+import io
+import time
 
 try:
     from anthropic import Anthropic
@@ -135,8 +139,10 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
                     value = str(result[key]).lower().strip()
                     if value in ["yes", "y", "true", "1"]:
                         result[key] = "yes"
+                        # buzz here L 
                     elif value in ["no", "n", "false", "0"]:
                         result[key] = "no"
+                        # buzz here too R
                     else:
                         # Default to "no" if unclear
                         result[key] = "no"
@@ -173,6 +179,60 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
             f.write(scene_description)
         
         return txt_path
+    def listen_for_audio(self) -> str:
+
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 44100
+        CHUNK = 1024
+        RECORD_SECONDS = 3
+
+        audio = pyaudio.PyAudio()
+
+        # Start Recording
+        stream = audio.open(format=FORMAT, channels=CHANNELS,
+                        rate=RATE, input=True,
+                        frames_per_buffer=CHUNK)
+        print("Recording for 3 seconds...")
+        frames = []
+
+        for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+            data = stream.read(CHUNK)
+            frames.append(data)
+
+        print("Recording finished.")
+
+        # Stop Recording
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+
+        # Write the recorded data to a BytesIO buffer as a WAV file
+        audio_bytesio = io.BytesIO()
+        with wave.open(audio_bytesio, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(audio.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
+
+        # Crucial step: seek to the beginning of the BytesIO buffer after writing
+        audio_bytesio.seek(0)
+
+        # You can now use 'audio_bytesio' as an in-memory file object
+        # For example, pass it to an API or another library that accepts file-like objects or bytes
+        # print(f"BytesIO object created, size: {len(audio_bytesio.getvalue())} bytes")
+
+
+
+        transcription = self.elevenlabs.speech_to_text.convert(
+            file=audio_bytesio,
+            model_id="scribe_v1", # Model to use, for now only "scribe_v1" is supported
+            tag_audio_events=True, # Tag audio events like laughter, applause, etc.
+            language_code="eng", # Language of the audio file. If set to None, the model will detect the language automatically.
+            diarize=True, # Whether to annotate who is speaking
+        )
+        print(type(transcription))
+        return transcription
 
     def generate_audio(self, scene_description: str) -> None:
         audio = self.elevenlabs.text_to_speech.convert(
@@ -184,27 +244,132 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
         play(audio)
 
 
-def analyze(image_base64: str, encoded: bool):
+def analyze(image_base64: str, encoded: bool, left_arduino, right_arduino, test=False):
     """Main entry point"""
+    if test:
+        try:
+            if left_arduino and left_arduino.is_open:
+                        left_arduino.write(b"b")
+                        print("[LEFT] Buzz triggered")
+            else:
+                        print("[LEFT] Arduino not connected")
+
+            if right_arduino and right_arduino.is_open:
+                        right_arduino.write(b"b")
+                        print("[RIGHT] Buzz triggered")
+            else:
+                print("[RIGHT] Arduino not connected")
+        except Exception as e:
+                print(f"Buzzing failed: {e}")  
+    else:
+        try:
+            analyzer = HazardAnalyzer()
+            if not encoded:
+                image_base64 = analyzer.encode_image(image_base64)
+            result = analyzer.analyze_image(image_base64)
+            # Print result as JSON
+            print(json.dumps(result, indent=2))
+            
+            # Save scene description to .txt file
+            scene_description = result.get("scene_description", "")
+            if scene_description:
+                txt_path = analyzer.save_scene_description(scene_description)
+                print(f"Scene description saved to: {txt_path}", file=sys.stderr)
+                
+                # buzz if object too close
+                try:
+                    print(result.get("object_too_close_on_left_side"))
+                    print(result.get("object_too_close_on_right_side"))
+                    if result.get("object_too_close_on_left_side") == "yes":
+                        if left_arduino and left_arduino.is_open:
+                            left_arduino.write(b"b")
+                            print("[LEFT] Buzz triggered")
+                        else:
+                            print("[LEFT] Arduino not connected")
+
+                    if result.get("object_too_close_on_right_side") == "yes":
+                        if right_arduino and right_arduino.is_open:
+                            right_arduino.write(b"b")
+                            print("[RIGHT] Buzz triggered")
+                        else:
+                            print("[RIGHT] Arduino not connected")
+                except Exception as e:
+                    print(f"Buzzing failed: {e}")
+                
+                analyzer.generate_audio(scene_description)
+            
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+def get_latest_file(directory):
+        """Return the path of the latest file in the given directory, or None if empty."""
+        files = [os.path.join(directory, f) for f in os.listdir(directory)]
+        files = [f for f in files if os.path.isfile(f)]
+        if not files:
+            return None
+        latest_file = max(files, key=os.path.getmtime)
+        return latest_file
+    
+def ask_question_about_image(encoded=False) -> str:
+    print("Asking question about latest image...")
+    analyzer = HazardAnalyzer()
+    
+    file = get_latest_file("tmp")
+
+    if not encoded:
+        image_base64 = analyzer.encode_image(file)
+    
+    # Step 1: Listen for audio and get transcription (the question)
+    print("Listening for your question...")
+    transcription_result = analyzer.listen_for_audio()
+    question = transcription_result.text
+    print(f"Question: {question}")
     
     try:
-        analyzer = HazardAnalyzer()
-        if not encoded:
-            image_base64 = analyzer.encode_image(image_base64)
-        result = analyzer.analyze_image(image_base64)
-        # Print result as JSON
-        print(json.dumps(result, indent=2))
+        # Step 2: Use Anthropic vision API to answer the question about the image
+        message = analyzer.client.messages.create(
+            model=analyzer.model,
+            max_tokens=100,  # Limit tokens for short response
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": image_base64
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": f"{question}\n\nPlease provide a short, concise answer in exactly one sentence."
+                        }
+                    ]
+                }
+            ]
+        )
         
-        # Save scene description to .txt file
-        scene_description = result.get("scene_description", "")
-        if scene_description:
-            txt_path = analyzer.save_scene_description(scene_description)
-            analyzer.generate_audio(scene_description)
-            print(f"Scene description saved to: {txt_path}", file=sys.stderr)
-           
+        # Extract response text
+        response_text = message.content[0].text.strip()
+        
+        # Ensure it's a single sentence (take first sentence if multiple)
+        sentences = response_text.split('.')
+        if len(sentences) > 1:
+            response_text = sentences[0].strip() + '.'
+
+        print(f"Claude response: {response_text}")
+        
+        # Step 3: Generate and play audio response
+        analyzer.generate_audio(response_text)
+        return response_text
+        
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+        error_msg = f"Error generating response: {e}"
+        print(error_msg, file=sys.stderr)
+        return error_msg
 
 def main():
     if len(sys.argv) < 2:

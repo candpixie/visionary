@@ -15,7 +15,7 @@ import cv2
 INPUT_DIR = "tmp"
 OUTPUT_FILE = "output.jpg"
 MODEL_PATH = "yolov8n-seg.pt"
-CHECK_INTERVAL = 6  # seconds
+CHECK_INTERVAL = 10  # seconds
 
 def get_latest_file(directory):
     """Return the path of the latest file in the given directory, or None if empty."""

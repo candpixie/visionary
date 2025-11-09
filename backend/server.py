@@ -12,7 +12,11 @@ import json
 import random
 from datetime import datetime
 from typing import Set, Dict, Any
-from analyze_hazard import analyze
+from analyze_hazard import analyze, ask_question_about_image
+import threading
+import serial
+import time
+import sounddevice as sd
 
 
 TMP_DIR = './tmp'
@@ -24,16 +28,88 @@ class GlaucoGuardServer:
     def __init__(self, host: str = "0.0.0.0", port: int = 8765):
         self.host = host
         self.port = port
+        #Arduino setup
+        self.baud = int(os.getenv("BAUD_RATE", "9600"))
+        self.test = False
+        self.left_port = os.getenv("LEFT_ARDUINO_PORT", "/dev/cu.usbmodemB0818497DA102")
+        self.right_port = os.getenv("RIGHT_ARDUINO_PORT", "/dev/cu.usbmodemB0818499D0202")
+        self.left_arduino = self.connect_arduino(self.left_port, "LEFT")
+        self.right_arduino = self.connect_arduino(self.right_port, "RIGHT")
+        if self.left_arduino:
+            threading.Thread(target=self.read_stream, args=(self.left_arduino, "LEFT"), daemon=True).start()
+        if self.right_arduino:
+            threading.Thread(target=self.read_stream, args=(self.right_arduino, "RIGHT"), daemon=True).start()
+        
         self.clients: Set[websockets.WebSocketServerProtocol] = set()
         self.mobile_clients: Set[websockets.WebSocketServerProtocol] = set()  # Phone camera clients
         self.client_types: Dict[websockets.WebSocketServerProtocol, bool] = {}  # Track if client is mobile
         self.client_streaming: Dict[websockets.WebSocketServerProtocol, bool] = {}  # Track which mobile clients are streaming
         self.detection_active = False
+        self.left_touch = threading.Event()
+        self.right_touch = threading.Event()
+        self.touch_detected = threading.Event()
         self.latest_frame: str = None  # Store latest video frame from phone
         self.streaming_active = False  # Track if mobile client is actively streaming
         self.explicitly_stopped = False  # Track if streaming was explicitly stopped (prevents re-enabling)
         self.last_analyze_time: float = 0  # Track last time analyze was called
         self.analyze_interval: float = 10.0  # Minimum seconds between analyze calls
+
+
+        
+    def read_stream(self, arduino, label):
+        pressed_state = False  # internal toggle memory
+
+        while arduino and arduino.is_open:
+            try:
+                line = arduino.readline().decode(errors="ignore").strip()
+                if not line:
+                    continue
+
+                if "touch=" in line.lower():
+                    value = line.split("=")[-1].strip()
+
+                    # Only act when Arduino reports a press
+                    if value == "1":
+                        pressed_state = not pressed_state  # flip ON/OFF
+                        state_str = "ON" if pressed_state else "OFF"
+                        print(f"[{label}] Toggled → {state_str}")
+
+                        if pressed_state:
+                            # Turn ON for this side
+                            if label == "LEFT":
+                                self.left_touch.set()
+                                # Trigger async question asking MIGHT FUCK SHIT
+                                ask_question_about_image()
+
+                                
+                            elif label == "RIGHT":
+                                self.right_touch.set()
+                            self.touch_detected.set()
+
+                        else:
+                            # Turn OFF for this side
+                            if label == "LEFT":
+                                self.left_touch.clear()
+                            elif label == "RIGHT":
+                                self.right_touch.clear()
+
+                            # If both sides are OFF, resume detection
+                            if not (self.left_touch.is_set() or self.right_touch.is_set()):
+                                self.touch_detected.clear()
+                                print("[SYSTEM] Both OFF → resuming detection")
+
+            except Exception as e:
+                print(f"[{label}] Error: {e}")
+                break
+
+    def connect_arduino(self, port, label):
+        try:
+            arduino = serial.Serial(port, self.baud, timeout=0.1)
+            print(f"[{label}] Connected.")
+            return arduino
+        except Exception as e:
+            print(f"[{label}] Connection failed: {e}")
+            return None
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol, is_mobile: bool = False):
         """Register a new client connection"""
@@ -128,7 +204,7 @@ class GlaucoGuardServer:
         loop = asyncio.get_running_loop()
         # Run blocking I/O in executor to avoid blocking the event loop
         await loop.run_in_executor(None, lambda: open(path, 'wb').write(image_data))
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Saved image to {path}")
+        # print(f"[{datetime.now().strftime('%H:%M:%S')}] Saved image to {path}")
 
     def simulate_detection(self) -> Dict[str, Any]:
         """
@@ -206,7 +282,7 @@ class GlaucoGuardServer:
                 if any_client_streaming:
                     data = self.simulate_detection()
                     await self.broadcast(data)
-                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Detection data sent to {len(self.clients)} web client(s) (streaming_active: {self.streaming_active}, explicitly_stopped: {self.explicitly_stopped}, any_client_streaming: {any_client_streaming})")
+                    # print(f"[{datetime.now().strftime('%H:%M:%S')}] Detection data sent to {len(self.clients)} web client(s) (streaming_active: {self.streaming_active}, explicitly_stopped: {self.explicitly_stopped}, any_client_streaming: {any_client_streaming})")
                 else:
                     # Safety check: if streaming_active is True but no clients are streaming, reset it
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] WARNING: streaming_active=True but no clients streaming, resetting immediately")
@@ -232,20 +308,29 @@ class GlaucoGuardServer:
                 return
 
             # Listen for client messages
+            # wrapped in a touch stream ->
+            # bool = 0
             async for message in websocket:
                 try:
                     data = json.loads(message)
                     # Debug: Log all incoming messages to see what we're receiving
                     if data.get("type") in ["stop_streaming", "video_frame", "phone_disconnecting"]:
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] Received message type: {data.get('type')} from client")
+                        # print(f"[{datetime.now().strftime('%H:%M:%S')}] Received message type: {data.get('type')} from client")
                         filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
                         asyncio.create_task(self.save_image_async(data["data"], filename))
                         
                         # Only analyze every 10 seconds
                         current_time = asyncio.get_event_loop().time()
-                        if current_time - self.last_analyze_time >= self.analyze_interval:
+                        if not self.touch_detected.is_set() and current_time - self.last_analyze_time >= self.analyze_interval:
                             self.last_analyze_time = current_time
-                            asyncio.create_task(analyze(data["data"], encoded=True))
+                            asyncio.create_task(analyze(
+                                    data["data"],
+                                    encoded=True,
+                                    left_arduino=self.left_arduino,
+                                    right_arduino=self.right_arduino,
+                                    test=self.test
+                                ))
+
                     
                     # Check if this is a mobile client sending video frames
                     if data.get("type") == "video_frame":
@@ -405,6 +490,12 @@ class GlaucoGuardServer:
             traceback.print_exc()
         finally:
             await self.unregister_client(websocket)
+            
+    def cleanup(self):
+        for arduino, label in [(self.left_arduino, "LEFT"), (self.right_arduino, "RIGHT")]:
+            if arduino and arduino.is_open:
+                arduino.close()
+                print(f"[{label}] Closed.")
 
     async def start(self):
         """Start the WebSocket server"""
@@ -435,6 +526,8 @@ async def main():
         await server.start()
     except KeyboardInterrupt:
         print("\n\nShutting down server...")
+        server.cleanup()
+        print("Server stopped.")
         server.detection_active = False
 
 
