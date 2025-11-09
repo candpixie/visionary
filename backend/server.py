@@ -51,7 +51,7 @@ class GlaucoGuardServer:
         self.streaming_active = False  # Track if mobile client is actively streaming
         self.explicitly_stopped = False  # Track if streaming was explicitly stopped (prevents re-enabling)
         self.last_analyze_time: float = 0  # Track last time analyze was called
-        self.analyze_interval: float = 10.0  # Minimum seconds between analyze calls
+        self.analyze_interval: float = 8.0  # Minimum seconds between analyze calls
 
 
         
