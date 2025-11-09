@@ -1,184 +1,339 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Visionary - Live Feed</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            background: linear-gradient(135deg, #000000 0%, #001919 30%, #004D4D 70%, #000000 100%);
-            background-attachment: fixed;
-            color: #00CED1;
-            font-family: monospace;
-            padding: 20px;
-            margin: 0;
-            min-height: 100vh;
-        }
+  <title>Visionary - Live Feed</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #000000 0%, #001919 30%, #004d4d 70%, #000000 100%);
+      background-attachment: fixed;
+      color: #00ced1;
+      font-family: monospace;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
 
-        .video-container {
-            max-width: 100%;
-            margin: 0 auto;
-        }
+    .video-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
 
-        h2 {
-            margin-top: 0;
-            text-align: center;
-            border-bottom: 2px solid #00CED1;
-            padding-bottom: 10px;
-            color: #00CED1;
-            text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
-        }
-        
-        #video {
-            width: 100%;
-            height: auto;
-            max-height: 90vh;
-            border: 2px solid #00CED1;
-            background: #000;
-            box-shadow: 0 0 20px rgba(0, 206, 209, 0.3);
-            display: block;
-            object-fit: contain; /* Show entire frame without cropping */
-            transform: translateZ(0); /* Hardware acceleration */
-            will-change: src; /* Optimize for frequent src changes */
-            backface-visibility: hidden; /* Improve rendering performance */
-            -webkit-backface-visibility: hidden;
-            image-rendering: -webkit-optimize-contrast; /* Faster rendering */
-            image-rendering: crisp-edges; /* Faster rendering */
-            image-rendering: pixelated; /* Fastest rendering mode */
-        }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      border-bottom: 2px solid #00ced1;
+      padding-bottom: 10px;
+      color: #00ced1;
+      text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
+    }
 
-        #noVideoMessage {
-            text-align: center;
-            color: #00CED1;
-            padding: 20px;
-            font-family: monospace;
-            text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
-        }
-    </style>
+    #video {
+      width: 100%;
+      height: auto;
+      max-height: 90vh;
+      border: 2px solid #00ced1;
+      background: #000;
+      box-shadow: 0 0 20px rgba(0, 206, 209, 0.3);
+      display: block;
+      object-fit: contain;
+      transform: translateZ(0);
+      will-change: src;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+
+    #noVideoMessage {
+      text-align: center;
+      color: #00ced1;
+      padding: 20px;
+      font-family: monospace;
+      text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
+    }
+  </style>
 </head>
 <body>
-    <div class="video-container">
-        <h2>GLAUCOGUARD - LIVE FEED (Phone Camera)</h2>
-        <img id="video" style="min-height: 200px;" />
-        <div id="noVideoMessage" style="display: none;">
-            No video stream. Start streaming from your phone.
+  <div class="video-container">
+    <h2>VISIONARY - LIVE FEED (Phone Camera)</h2>
+    <img id="video" style="min-height: 200px;" />
+    <div id="noVideoMessage" style="display: none;">
+      No video stream. Start streaming from your phone.
+    </div>
+  </div>
+
+  <script>
+    // WebSocket connection to backend
+    let ws = null;
+    let reconnectInterval = null;
+
+    function connectWebSocket() {
+      // Connect to WebSocket server
+      // Default to localhost:8765, but allow override via URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const wsHost = urlParams.get('host') || 'localhost';
+      const wsPort = urlParams.get('port') || '8765';
+      const wsUrl = `ws://${wsHost}:${wsPort}`;
+    }
+  </script>
+</body>
+</html>
+
+<!-- ============================================================= -->
+<!-- GlaucoGuard Output Viewer -->
+<!-- ============================================================= -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visionary - Output Viewer</title>
+  <style>
+    :root {
+      --bg: #111;
+      --muted: #9fd99f;
+      --accent: #00ff00;
+      --card: #1a1a1a;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--accent);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    header .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #222;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .viewer {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+
+    .image-wrap {
+      background: #000;
+      border: 2px solid var(--accent);
+      min-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #outputImage {
+      max-width: 100%;
+      max-height: 80vh;
+      display: block;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      border-radius: 6px;
+      background: #0b0b0b;
+      font-size: 14px;
+    }
+
+    .metric strong {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #9bd29b;
+    }
+
+    .error {
+      color: #ff6b6b;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: #7fb77f;
+      font-size: 13px;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #3a3a3a;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Visionary — output.jpg viewer</h1>
+      <div class="controls">
+        <button id="refreshBtn">Refresh now</button>
+        <div class="small" id="status">Idle</div>
+      </div>
+    </header>
+
+    <div class="viewer">
+      <div class="card image-wrap" id="imageCard">
+        <img id="outputImage" alt="output.jpg" src="" />
+      </div>
+
+      <aside class="sidebar">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:6px">Metrics</div>
+          <div class="metric"><span>Last fetch</span><strong id="lastFetch">--</strong></div>
+          <div class="metric"><span>Fetch duration</span><strong id="fetchMs">--</strong></div>
+          <div class="metric"><span>Image size</span><strong id="sizeBytes">--</strong></div>
+          <div class="metric"><span>HTTP last-modified</span><strong id="lastModified">--</strong></div>
+          <div class="metric"><span>HTTP status</span><strong id="httpStatus">--</strong></div>
         </div>
+
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:6px">Settings</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <label class="small">Poll interval (s)</label>
+            <input id="intervalInput" type="number" min="1" value="10" style="width:80px;padding:6px;border-radius:6px;background:#0d0d0d;border:1px solid #222;color:var(--accent)" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:6px">Info</div>
+          <div class="small">
+            This page polls <code>../backend/output.jpg</code> and reloads it with a cache-busting query string.
+            If you host this page from a webserver, ensure the server serves the backend file or create a static
+            route to <code>backend/output.jpg</code>.
+          </div>
+        </div>
+      </aside>
     </div>
 
-    <script>
-        // WebSocket connection to backend
-        let ws = null;
-        let reconnectInterval = null;
+    <footer>Last checked: <span id="footerStatus">never</span></footer>
+  </div>
 
-        function connectWebSocket() {
-            // Connect to WebSocket server
-            // Default to localhost:8765, but allow override via URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const wsHost = urlParams.get('host') || 'localhost';
-            const wsPort = urlParams.get('port') || '8765';
-            const wsUrl = `ws://${wsHost}:${wsPort}`;
-            
-            console.log('Connecting to WebSocket:', wsUrl);
-            ws = new WebSocket(wsUrl);
+  <script>
+    const outputPath = '../backend/output.jpg';
+    const imgEl = document.getElementById('outputImage');
+    const lastFetchEl = document.getElementById('lastFetch');
+    const fetchMsEl = document.getElementById('fetchMs');
+    const sizeBytesEl = document.getElementById('sizeBytes');
+    const lastModifiedEl = document.getElementById('lastModified');
+    const httpStatusEl = document.getElementById('httpStatus');
+    const statusEl = document.getElementById('status');
+    const footerStatus = document.getElementById('footerStatus');
+    let intervalId = null;
 
-            ws.onopen = function() {
-                console.log('Connected to GlaucoGuard server');
-                if (reconnectInterval) {
-                    clearInterval(reconnectInterval);
-                    reconnectInterval = null;
-                }
-            };
+    async function fetchAndShow() {
+      const t0 = performance.now();
+      const ts = Date.now();
+      const url = outputPath + '?_=' + ts;
+      statusEl.textContent = 'Fetching...';
 
-            ws.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    
-                    // Handle video frames from mobile camera
-                    if (data.type === 'video_frame' && data.data) {
-                        displayVideoFrame(data.data);
-                    } else if (data.type === 'stop_streaming') {
-                        clearVideoFrame();
-                    } else if (data.type === 'phone_disconnected') {
-                        clearVideoFrame();
-                    }
-                } catch (e) {
-                    console.error('Error parsing message:', e);
-                }
-            };
+      try {
+        const resp = await fetch(url, { cache: 'no-store' });
+        const t1 = performance.now();
+        const duration = Math.round(t1 - t0);
+        fetchMsEl.textContent = duration + ' ms';
+        httpStatusEl.textContent = resp.status;
 
-            ws.onerror = function(error) {
-                console.error('WebSocket error:', error);
-            };
-
-            ws.onclose = function() {
-                console.log('Disconnected from server');
-                clearVideoFrame();
-
-                // Attempt to reconnect every 3 seconds
-                if (!reconnectInterval) {
-                    reconnectInterval = setInterval(connectWebSocket, 3000);
-                }
-            };
+        if (!resp.ok) {
+          statusEl.innerHTML = `<span class="error">HTTP ${resp.status}</span>`;
+          imgEl.src = '';
+          lastModifiedEl.textContent = resp.headers.get('last-modified') || '--';
+          sizeBytesEl.textContent = '--';
+          lastFetchEl.textContent = new Date(ts).toLocaleString();
+          footerStatus.textContent = new Date().toLocaleString();
+          return;
         }
 
-        let isStreaming = false;
-        let latestFrame = null;
-        
-        function displayVideoFrame(base64Data) {
-            if (!isStreaming) {
-                isStreaming = true;
-            }
-            
-            latestFrame = base64Data;
-            updateFrameImmediately();
-        }
-        
-        function updateFrameImmediately() {
-            if (!isStreaming || !latestFrame) {
-                return;
-            }
-            
-            const base64Data = latestFrame;
-            const video = document.getElementById('video');
-            
-            if (video && base64Data) {
-                showVideoFrame();
-                video.src = 'data:image/jpeg;base64,' + base64Data;
-            }
-        }
-        
-        function clearVideoFrame() {
-            isStreaming = false;
-            latestFrame = null;
-            
-            const video = document.getElementById('video');
-            const noVideoMsg = document.getElementById('noVideoMessage');
-            
-            if (video) {
-                video.src = '';
-                video.style.display = 'none';
-            }
-            
-            if (noVideoMsg) {
-                noVideoMsg.style.display = 'block';
-            }
-        }
-        
-        function showVideoFrame() {
-            const video = document.getElementById('video');
-            const noVideoMsg = document.getElementById('noVideoMessage');
-            if (video) {
-                video.style.display = 'block';
-            }
-            if (noVideoMsg) {
-                noVideoMsg.style.display = 'none';
-            }
-        }
+        const blob = await resp.blob();
+        sizeBytesEl.textContent = blob.size + ' bytes';
+        lastModifiedEl.textContent = resp.headers.get('last-modified') || '--';
+        lastFetchEl.textContent = new Date(ts).toLocaleString();
+        footerStatus.textContent = new Date().toLocaleString();
 
-        // Start the application
-        window.onload = function() {
-            connectWebSocket();
-        };
-    </script>
+        const objectUrl = URL.createObjectURL(blob);
+        const prev = imgEl.getAttribute('data-objurl');
+        imgEl.src = objectUrl;
+        imgEl.setAttribute('data-objurl', objectUrl);
+        setTimeout(() => {
+          if (prev) try { URL.revokeObjectURL(prev); } catch (e) {}
+        }, 1000);
+
+        statusEl.textContent = 'OK';
+      } catch (err) {
+        console.error('Fetch failed', err);
+        statusEl.innerHTML = '<span class="error">fetch error</span>';
+        fetchMsEl.textContent = '--';
+        sizeBytesEl.textContent = '--';
+        lastModifiedEl.textContent = '--';
+        httpStatusEl.textContent = '--';
+      }
+    }
+
+    function startPolling(seconds) {
+      if (intervalId) clearInterval(intervalId);
+      fetchAndShow();
+      intervalId = setInterval(fetchAndShow, Math.max(1, seconds) * 1000);
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', fetchAndShow);
+    document.getElementById('intervalInput').addEventListener('change', (e) => {
+      const v = Number(e.target.value) || 10;
+      startPolling(v);
+    });
+
+    startPolling(10);
+    setInterval(() => {
+      footerStatus.textContent = new Date().toLocaleString();
+    }, 1000);
+  </script>
 </body>
 </html>
