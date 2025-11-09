@@ -1,6 +1,6 @@
 
 .env
-yolo_env/
+yolo_venv/
 venv/
 flask_env/
 tmp/
