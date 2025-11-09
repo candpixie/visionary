@@ -17,6 +17,7 @@ import threading
 import serial
 import io
 from PIL import Image
+from directions import navigate_once
 
 TMP_DIR = './tmp'
 os.makedirs(TMP_DIR, exist_ok=True)
@@ -83,6 +84,7 @@ class GlaucoGuardServer:
                                 
                             elif label == "RIGHT":
                                 self.right_touch.set()
+                                navigate_once()
                             self.touch_detected.set()
 
                         else:
