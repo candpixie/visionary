@@ -1,6 +1,9 @@
 
 .env
+yolo_env/
 tmp/
+output/
+yolov8n-seg.pt
 
 # Python
 __pycache__/
