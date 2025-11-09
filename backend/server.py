@@ -15,9 +15,8 @@ from typing import Set, Dict, Any
 from analyze_hazard import analyze, ask_question_about_image
 import threading
 import serial
-import time
-import sounddevice as sd
-
+import io
+from PIL import Image
 
 TMP_DIR = './tmp'
 os.makedirs(TMP_DIR, exist_ok=True)
@@ -323,13 +322,32 @@ class GlaucoGuardServer:
                         current_time = asyncio.get_event_loop().time()
                         if not self.touch_detected.is_set() and current_time - self.last_analyze_time >= self.analyze_interval:
                             self.last_analyze_time = current_time
-                            asyncio.create_task(analyze(
-                                    data["data"],
-                                    encoded=True,
-                                    left_arduino=self.left_arduino,
-                                    right_arduino=self.right_arduino,
-                                    test=self.test
-                                ))
+                            try:
+                                    # Decode Base64 to bytes
+                                    image_bytes = base64.b64decode(data["data"])
+                                    image = Image.open(io.BytesIO(image_bytes))
+
+                                    # TRANSPOSE the image (flip horizontally as example)
+                                    rotated_image = image.rotate(-90, expand=True)
+
+                                    # Save transposed image to tmp dir
+                                    filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                                    image_path = os.path.join(TMP_DIR, filename)
+                                    rotated_image.save(image_path)
+                                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Saved transposed image for analysis: {image_path}")
+
+                                    # Pass file path to analyze function
+                                    asyncio.create_task(analyze(
+                                        image_path,
+                                        encoded=False,
+                                        left_arduino=self.left_arduino,
+                                        right_arduino=self.right_arduino,
+                                        test=self.test
+                                    ))
+
+                            except Exception as e:
+                                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Error decoding/transposing image: {e}")
+                            
 
                     
                     # Check if this is a mobile client sending video frames

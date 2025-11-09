@@ -26,6 +26,7 @@ except ImportError:
 
 # Load environment variables
 load_dotenv()
+playing_audio = False
 
 
 class HazardAnalyzer:
@@ -235,6 +236,12 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
         return transcription
 
     def generate_audio(self, scene_description: str) -> None:
+        global playing_audio
+        if playing_audio:
+            return
+            
+        playing_audio = True
+
         audio = self.elevenlabs.text_to_speech.convert(
             text=scene_description,
             voice_id="JBFqnCBsd6RMkjVDRZzb",
@@ -242,6 +249,7 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
             output_format="mp3_44100_128",
         )
         play(audio)
+        playing_audio = False
 
 
 def analyze(image_base64: str, encoded: bool, left_arduino, right_arduino, test=False):
@@ -312,6 +320,8 @@ def get_latest_file(directory):
         return latest_file
     
 def ask_question_about_image(encoded=False) -> str:
+    global playing_audio
+    playing_audio = True
     print("Asking question about latest image...")
     analyzer = HazardAnalyzer()
     
@@ -361,6 +371,8 @@ def ask_question_about_image(encoded=False) -> str:
             response_text = sentences[0].strip() + '.'
 
         print(f"Claude response: {response_text}")
+        playing_audio = False
+
         
         # Step 3: Generate and play audio response
         analyzer.generate_audio(response_text)

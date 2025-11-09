@@ -14,7 +14,7 @@ export default function HomeScreen({ onNavigateToCamera, onNavigateToSignIn, onN
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>GLAUCOGUARD</Text>
+        <Text style={styles.title}>VISIONARY</Text>
         <Text style={styles.subtitle}>Detection System</Text>
       </View>
 
