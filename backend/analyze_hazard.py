@@ -49,7 +49,7 @@ class HazardAnalyzer:
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
     
-    def analyze_image(self, image_path: str) -> Dict[str, Any]:
+    def analyze_image(self, image_data: str) -> Dict[str, Any]:
         """
         Analyze image for hazards and return structured output
         
@@ -62,20 +62,9 @@ class HazardAnalyzer:
             - object_too_close_on_left_side: "yes" or "no"
             - object_too_close_on_right_side: "yes" or "no"
         """
-        # Encode image
-        image_data = self.encode_image(image_path)
         
         # Determine image format from file extension
-        image_path_obj = Path(image_path)
-        ext = image_path_obj.suffix.lower()
-        if ext in ['.jpg', '.jpeg']:
-            media_type = "image/jpeg"
-        elif ext == '.png':
-            media_type = "image/png"
-        elif ext == '.webp':
-            media_type = "image/webp"
-        else:
-            media_type = "image/jpeg"  # Default
+        media_type = "image/jpeg"  # Default
         
         # Create prompt with JSON schema
         prompt = """Analyze this image and provide a structured response in JSON format.
@@ -165,7 +154,7 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
             raise
 
 
-    def save_scene_description(self, scene_description: str, image_path: str) -> Path:
+    def save_scene_description(self, scene_description: str) -> Path:
         """
         Save scene description to a .txt file
         
@@ -176,9 +165,8 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
         Returns:
             Path to the saved .txt file
         """
-        image_path_obj = Path(image_path)
         # Create .txt filename based on image filename
-        txt_path = image_path_obj.with_suffix('.txt')
+        txt_path = "description.txt"
         
         # Write scene description to file
         with open(txt_path, 'w', encoding='utf-8') as f:
@@ -196,8 +184,29 @@ Consider an object "too close" if it appears within approximately 2-3 feet (60-9
         play(audio)
 
 
-def main():
+def analyze(image_base64: str, encoded: bool):
     """Main entry point"""
+    
+    try:
+        analyzer = HazardAnalyzer()
+        if not encoded:
+            image_base64 = analyzer.encode_image(image_base64)
+        result = analyzer.analyze_image(image_base64)
+        # Print result as JSON
+        print(json.dumps(result, indent=2))
+        
+        # Save scene description to .txt file
+        scene_description = result.get("scene_description", "")
+        if scene_description:
+            txt_path = analyzer.save_scene_description(scene_description)
+            analyzer.generate_audio(scene_description)
+            print(f"Scene description saved to: {txt_path}", file=sys.stderr)
+           
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def main():
     if len(sys.argv) < 2:
         print("Usage: python analyze_hazard.py <image_path>")
         print("\nExample:")
@@ -205,26 +214,7 @@ def main():
         sys.exit(1)
     
     image_path = sys.argv[1]
-    
-    try:
-        analyzer = HazardAnalyzer()
-        result = analyzer.analyze_image(image_path)
-        # Print result as JSON
-        print(json.dumps(result, indent=2))
-        
-        # Save scene description to .txt file
-        scene_description = result.get("scene_description", "")
-        if scene_description:
-            txt_path = analyzer.save_scene_description(scene_description, image_path)
-            analyzer.generate_audio(scene_description)
-            print(f"Scene description saved to: {txt_path}", file=sys.stderr)
-        
-        
-        
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
+    analyze(image_path, encoded=False)
 
 if __name__ == "__main__":
     main()

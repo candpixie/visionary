@@ -12,6 +12,7 @@ import json
 import random
 from datetime import datetime
 from typing import Set, Dict, Any
+from analyze_hazard import analyze
 
 
 TMP_DIR = './tmp'
@@ -31,6 +32,8 @@ class GlaucoGuardServer:
         self.latest_frame: str = None  # Store latest video frame from phone
         self.streaming_active = False  # Track if mobile client is actively streaming
         self.explicitly_stopped = False  # Track if streaming was explicitly stopped (prevents re-enabling)
+        self.last_analyze_time: float = 0  # Track last time analyze was called
+        self.analyze_interval: float = 10.0  # Minimum seconds between analyze calls
 
     async def register_client(self, websocket: websockets.WebSocketServerProtocol, is_mobile: bool = False):
         """Register a new client connection"""
@@ -237,7 +240,12 @@ class GlaucoGuardServer:
                         print(f"[{datetime.now().strftime('%H:%M:%S')}] Received message type: {data.get('type')} from client")
                         filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
                         asyncio.create_task(self.save_image_async(data["data"], filename))
-
+                        
+                        # Only analyze every 10 seconds
+                        current_time = asyncio.get_event_loop().time()
+                        if current_time - self.last_analyze_time >= self.analyze_interval:
+                            self.last_analyze_time = current_time
+                            asyncio.create_task(analyze(data["data"], encoded=True))
                     
                     # Check if this is a mobile client sending video frames
                     if data.get("type") == "video_frame":
