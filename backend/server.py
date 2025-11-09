@@ -5,12 +5,17 @@ WebSocket server for real-time obstacle detection and haptic feedback
 """
 
 import asyncio
+import base64
+import os
 import websockets
 import json
 import random
 from datetime import datetime
 from typing import Set, Dict, Any
 
+
+TMP_DIR = './tmp'
+os.makedirs(TMP_DIR, exist_ok=True)
 
 class GlaucoGuardServer:
     """Main server class for GlaucoGuard detection system"""
@@ -112,6 +117,15 @@ class GlaucoGuardServer:
             for client in disconnected:
                 self.clients.discard(client)
                 self.client_types.pop(client, None)
+
+    async def save_image_async(self, image_base64: str, filename: str):
+        """Async function to save a base64 image to disk"""
+        image_data = base64.b64decode(image_base64)
+        path = os.path.join(TMP_DIR, filename)
+        loop = asyncio.get_running_loop()
+        # Run blocking I/O in executor to avoid blocking the event loop
+        await loop.run_in_executor(None, lambda: open(path, 'wb').write(image_data))
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Saved image to {path}")
 
     def simulate_detection(self) -> Dict[str, Any]:
         """
@@ -221,6 +235,9 @@ class GlaucoGuardServer:
                     # Debug: Log all incoming messages to see what we're receiving
                     if data.get("type") in ["stop_streaming", "video_frame", "phone_disconnecting"]:
                         print(f"[{datetime.now().strftime('%H:%M:%S')}] Received message type: {data.get('type')} from client")
+                        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                        asyncio.create_task(self.save_image_async(data["data"], filename))
+
                     
                     # Check if this is a mobile client sending video frames
                     if data.get("type") == "video_frame":
