@@ -1,3 +1,12 @@
+
+.env
+yolo_venv/
+venv/
+flask_env/
+tmp/
+output/
+yolov8n-seg.pt
+
 # Python
 __pycache__/
 *.py[cod]

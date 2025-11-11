@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform, Image } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { StatusBar } from 'expo-status-bar';
+import HomeScreen from './components/HomeScreen';
+import SignInScreen from './components/SignInScreen';
+import CreateAccountScreen from './components/CreateAccountScreen';
+import AssessmentScreen from './components/AssessmentScreen';
+import { SERVER_IP, SERVER_PORT } from '@env';
 
 // WebSocket connection for streaming
 let ws = null;
@@ -9,10 +14,12 @@ let frameInterval = null;
 let isCapturing = false; // Flag to prevent concurrent captures
 
 export default function App() {
+  const [currentScreen, setCurrentScreen] = useState('home'); // 'home', 'signin', 'createaccount', 'assessment', or 'camera'
   const [permission, requestPermission] = useCameraPermissions();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [serverUrl, setServerUrl] = useState('ws://10.28.39.17:8765'); // Change to your laptop's IP
+  // Use environment variables from mobile/.env
+  const [serverUrl, setServerUrl] = useState(`ws://${SERVER_IP}:${SERVER_PORT}`);
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -37,7 +44,7 @@ export default function App() {
         console.log('✅ Connected to server');
         setIsConnected(true);
         setIsConnecting(false);
-        Alert.alert('Connected', 'Successfully connected to GlaucoGuard server');
+        Alert.alert('Connected', 'Successfully connected to Visionary server');
       };
 
       ws.onerror = (error) => {
@@ -197,6 +204,71 @@ export default function App() {
     setIsConnected(false);
   };
 
+  const handleNavigateToCamera = () => {
+    setCurrentScreen('camera');
+  };
+
+  const handleNavigateToSignIn = () => {
+    setCurrentScreen('signin');
+  };
+
+  const handleNavigateToCreateAccount = () => {
+    setCurrentScreen('createaccount');
+  };
+
+  const handleNavigateToHome = () => {
+    // Stop streaming and disconnect when going back to home
+    if (isStreaming) {
+      stopStreaming();
+    }
+    if (isConnected) {
+      disconnect();
+    }
+    setCurrentScreen('home');
+  };
+
+  const handleSignIn = () => {
+    // TODO: Implement actual sign in logic
+    // Navigate to assessment screen
+    console.log('Sign in successful');
+    setCurrentScreen('camera');
+  };
+
+  const handleCreateAccount = () => {
+    // TODO: Implement actual account creation logic
+    // Navigate to assessment screen
+    console.log('Account created successfully');
+    setCurrentScreen('assessment');
+  };
+
+  const handleAssessmentComplete = (answers) => {
+    // TODO: Save assessment answers
+    console.log('Assessment completed with answers:', answers);
+    // Navigate to camera screen after assessment
+    setCurrentScreen('camera');
+  };
+
+  // Show home screen
+  if (currentScreen === 'home') {
+    return <HomeScreen onNavigateToCamera={handleNavigateToCamera} onNavigateToSignIn={handleNavigateToSignIn} onNavigateToCreateAccount={handleNavigateToCreateAccount} />;
+  }
+
+  // Show sign in screen
+  if (currentScreen === 'signin') {
+    return <SignInScreen onSignIn={handleSignIn} onBack={handleNavigateToHome} onNavigateToCreateAccount={handleNavigateToCreateAccount} />;
+  }
+
+  // Show create account screen
+  if (currentScreen === 'createaccount') {
+    return <CreateAccountScreen onCreateAccount={handleCreateAccount} onBack={handleNavigateToHome} onNavigateToSignIn={handleNavigateToSignIn} />;
+  }
+
+  // Show assessment screen
+  if (currentScreen === 'assessment') {
+    return <AssessmentScreen onComplete={handleAssessmentComplete} onBack={handleNavigateToHome} />;
+  }
+
+  // Camera permission checks
   if (!permission) {
     return (
       <View style={styles.container}>
@@ -213,16 +285,27 @@ export default function App() {
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.disconnectButton]} onPress={handleNavigateToHome}>
+          <Text style={styles.buttonText}>Back to Home</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // Camera screen
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>GLAUCOGUARD CAMERA</Text>
+        <View style={styles.headerLeft}>
+          <Image 
+            source={require('./assets/logo.png')} 
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>VISIONARY</Text>
+        </View>
         <View style={[styles.statusIndicator, isConnected && styles.statusConnected]}>
           <Text style={styles.statusText}>
             {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
@@ -261,6 +344,9 @@ export default function App() {
             </TouchableOpacity>
           </>
         )}
+        <TouchableOpacity style={[styles.button, { backgroundColor: '#444' }]} onPress={handleNavigateToHome}>
+          <Text style={styles.buttonText}>← BACK TO HOME</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.info}>
@@ -293,25 +379,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+  },
   title: {
-    color: '#00ff00',
+    color: '#00CED1',
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'monospace',
+    textShadowColor: '#008B8B',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   statusIndicator: {
-    backgroundColor: '#ff0000',
+    backgroundColor: '#660000',
     paddingHorizontal: 15,
     paddingVertical: 5,
     borderRadius: 5,
   },
   statusConnected: {
-    backgroundColor: '#00ff00',
+    backgroundColor: '#00CED1',
   },
   statusText: {
     color: '#000',
     fontWeight: 'bold',
     fontSize: 12,
+    fontFamily: 'monospace',
   },
   camera: {
     flex: 1,
@@ -328,7 +428,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   startButton: {
-    backgroundColor: '#00ff00',
+    backgroundColor: '#00CED1',
+    borderWidth: 1,
+    borderColor: '#48D1CC',
+    shadowColor: '#008B8B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
   stopButton: {
     backgroundColor: '#ff0000',
@@ -344,13 +450,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'monospace',
   },
   info: {
     padding: 15,
     backgroundColor: '#0a0a0a',
   },
   infoText: {
-    color: '#00ff00',
+    color: '#00CED1',
     fontSize: 12,
     fontFamily: 'monospace',
     marginBottom: 5,
@@ -360,11 +467,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 10,
+    fontFamily: 'monospace',
   },
   helpText: {
-    color: '#00ff00',
+    color: '#00CED1',
     fontSize: 14,
     textAlign: 'center',
+    fontFamily: 'monospace',
   },
 });
 

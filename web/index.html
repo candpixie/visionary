@@ -1,440 +1,339 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GLAUCOGUARD - Detection System</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            background: #1a1a1a;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            display: flex;
-            padding: 20px;
-            margin: 0;
-        }
+  <title>Visionary - Live Feed</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #000000 0%, #001919 30%, #004d4d 70%, #000000 100%);
+      background-attachment: fixed;
+      color: #00ced1;
+      font-family: monospace;
+      padding: 20px;
+      margin: 0;
+      min-height: 100vh;
+    }
 
-        .video-container {
-            flex: 2;
-            margin-right: 20px;
-        }
+    .video-container {
+      max-width: 100%;
+      margin: 0 auto;
+    }
 
-        video, #video {
-            width: 100%;
-            border: 2px solid #00ff00;
-            background: #000;
-        }
-        
-        #video {
-            display: block;
-            object-fit: contain;
-            transform: translateZ(0); /* Hardware acceleration */
-            will-change: src; /* Optimize for frequent src changes */
-            backface-visibility: hidden; /* Improve rendering performance */
-            -webkit-backface-visibility: hidden;
-            image-rendering: -webkit-optimize-contrast; /* Faster rendering */
-            image-rendering: crisp-edges; /* Faster rendering */
-            image-rendering: pixelated; /* Fastest rendering mode */
-        }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      border-bottom: 2px solid #00ced1;
+      padding-bottom: 10px;
+      color: #00ced1;
+      text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
+    }
 
-        .info-panel {
-            flex: 1;
-            border: 2px solid #00ff00;
-            padding: 20px;
-            min-width: 300px;
-        }
+    #video {
+      width: 100%;
+      height: auto;
+      max-height: 90vh;
+      border: 2px solid #00ced1;
+      background: #000;
+      box-shadow: 0 0 20px rgba(0, 206, 209, 0.3);
+      display: block;
+      object-fit: contain;
+      transform: translateZ(0);
+      will-change: src;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
 
-        h2 {
-            margin-top: 0;
-            text-align: center;
-            border-bottom: 2px solid #00ff00;
-            padding-bottom: 10px;
-        }
-
-        .zone {
-            padding: 15px;
-            margin: 10px 0;
-            border: 2px solid #333;
-            border-radius: 5px;
-            font-size: 20px;
-            text-align: center;
-            background: #0a0a0a;
-            transition: all 0.3s;
-        }
-
-        .zone.active {
-            background: #ff0000;
-            border-color: #ff0000;
-            animation: pulse 0.5s infinite;
-            color: #fff;
-            font-weight: bold;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        .status {
-            margin: 20px 0;
-            font-size: 18px;
-        }
-
-        .status strong {
-            display: inline-block;
-            width: 150px;
-        }
-
-        .distance-bar {
-            height: 30px;
-            background: #333;
-            margin: 10px 0;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .distance-fill {
-            height: 100%;
-            background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
-            transition: width 0.3s;
-        }
-
-        #connectionStatus {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 10px 20px;
-            background: #ff0000;
-            border: 2px solid #fff;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 12px;
-            max-width: 250px;
-            text-align: center;
-        }
-
-        #connectionStatus.connected {
-            background: #00ff00;
-            color: #000;
-        }
-
-        .zone-distance {
-            font-size: 16px;
-            margin-top: 5px;
-        }
-    </style>
+    #noVideoMessage {
+      text-align: center;
+      color: #00ced1;
+      padding: 20px;
+      font-family: monospace;
+      text-shadow: 0 0 10px rgba(0, 206, 209, 0.5);
+    }
+  </style>
 </head>
 <body>
-    <div id="connectionStatus">DISCONNECTED</div>
+  <div class="video-container">
+    <h2>VISIONARY - LIVE FEED (Phone Camera)</h2>
+    <img id="video" style="min-height: 200px;" />
+    <div id="noVideoMessage" style="display: none;">
+      No video stream. Start streaming from your phone.
+    </div>
+  </div>
 
-    <div class="video-container">
-        <h2>GLAUCOGUARD - LIVE FEED (Phone Camera)</h2>
-        <img id="video" style="width: 100%; border: 2px solid #00ff00; background: #000; min-height: 200px;" />
-        <div id="noVideoMessage" style="display: none; text-align: center; color: #00ff00; padding: 20px; font-family: 'Courier New', monospace;">
-            No video stream. Start streaming from your phone.
+  <script>
+    // WebSocket connection to backend
+    let ws = null;
+    let reconnectInterval = null;
+
+    function connectWebSocket() {
+      // Connect to WebSocket server
+      // Default to localhost:8765, but allow override via URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const wsHost = urlParams.get('host') || 'localhost';
+      const wsPort = urlParams.get('port') || '8765';
+      const wsUrl = `ws://${wsHost}:${wsPort}`;
+    }
+  </script>
+</body>
+</html>
+
+<!-- ============================================================= -->
+<!-- GlaucoGuard Output Viewer -->
+<!-- ============================================================= -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visionary - Output Viewer</title>
+  <style>
+    :root {
+      --bg: #111;
+      --muted: #9fd99f;
+      --accent: #00ff00;
+      --card: #1a1a1a;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--accent);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    header .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #222;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .viewer {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+
+    .image-wrap {
+      background: #000;
+      border: 2px solid var(--accent);
+      min-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #outputImage {
+      max-width: 100%;
+      max-height: 80vh;
+      display: block;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      border-radius: 6px;
+      background: #0b0b0b;
+      font-size: 14px;
+    }
+
+    .metric strong {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #9bd29b;
+    }
+
+    .error {
+      color: #ff6b6b;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: #7fb77f;
+      font-size: 13px;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid #2a2a2a;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #3a3a3a;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Visionary — output.jpg viewer</h1>
+      <div class="controls">
+        <button id="refreshBtn">Refresh now</button>
+        <div class="small" id="status">Idle</div>
+      </div>
+    </header>
+
+    <div class="viewer">
+      <div class="card image-wrap" id="imageCard">
+        <img id="outputImage" alt="output.jpg" src="" />
+      </div>
+
+      <aside class="sidebar">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:6px">Metrics</div>
+          <div class="metric"><span>Last fetch</span><strong id="lastFetch">--</strong></div>
+          <div class="metric"><span>Fetch duration</span><strong id="fetchMs">--</strong></div>
+          <div class="metric"><span>Image size</span><strong id="sizeBytes">--</strong></div>
+          <div class="metric"><span>HTTP last-modified</span><strong id="lastModified">--</strong></div>
+          <div class="metric"><span>HTTP status</span><strong id="httpStatus">--</strong></div>
         </div>
-        <canvas id="canvas" style="display:none;"></canvas>
+
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:6px">Settings</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+            <label class="small">Poll interval (s)</label>
+            <input id="intervalInput" type="number" min="1" value="10" style="width:80px;padding:6px;border-radius:6px;background:#0d0d0d;border:1px solid #222;color:var(--accent)" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:6px">Info</div>
+          <div class="small">
+            This page polls <code>../backend/output.jpg</code> and reloads it with a cache-busting query string.
+            If you host this page from a webserver, ensure the server serves the backend file or create a static
+            route to <code>backend/output.jpg</code>.
+          </div>
+        </div>
+      </aside>
     </div>
 
-    <div class="info-panel">
-        <h2>DETECTION STATUS</h2>
+    <footer>Last checked: <span id="footerStatus">never</span></footer>
+  </div>
 
-        <div id="leftZone" class="zone">
-            ← LEFT ZONE<br>
-            <span id="leftDist" class="zone-distance">--</span>
-        </div>
+  <script>
+    const outputPath = '../backend/output.jpg';
+    const imgEl = document.getElementById('outputImage');
+    const lastFetchEl = document.getElementById('lastFetch');
+    const fetchMsEl = document.getElementById('fetchMs');
+    const sizeBytesEl = document.getElementById('sizeBytes');
+    const lastModifiedEl = document.getElementById('lastModified');
+    const httpStatusEl = document.getElementById('httpStatus');
+    const statusEl = document.getElementById('status');
+    const footerStatus = document.getElementById('footerStatus');
+    let intervalId = null;
 
-        <div id="centerZone" class="zone">
-            ↑ CENTER ZONE<br>
-            <span id="centerDist" class="zone-distance">--</span>
-        </div>
+    async function fetchAndShow() {
+      const t0 = performance.now();
+      const ts = Date.now();
+      const url = outputPath + '?_=' + ts;
+      statusEl.textContent = 'Fetching...';
 
-        <div id="rightZone" class="zone">
-            RIGHT ZONE →<br>
-            <span id="rightDist" class="zone-distance">--</span>
-        </div>
+      try {
+        const resp = await fetch(url, { cache: 'no-store' });
+        const t1 = performance.now();
+        const duration = Math.round(t1 - t0);
+        fetchMsEl.textContent = duration + ' ms';
+        httpStatusEl.textContent = resp.status;
 
-        <div class="status">
-            <strong>SYSTEM STATUS:</strong> <span id="status">INITIALIZING</span>
-        </div>
-
-        <div class="status">
-            <strong>DETECTIONS:</strong> <span id="detectionCount">0</span>
-        </div>
-
-        <div class="status">
-            <strong>HAPTIC STATUS:</strong> <span id="hapticStatus">READY</span>
-        </div>
-    </div>
-
-    <script>
-        // WebSocket connection to backend
-        let ws = null;
-        let detectionCount = 0;
-        let reconnectInterval = null;
-        let phoneConnected = false; // Track if phone is connected
-
-        function connectWebSocket() {
-            // Connect to WebSocket server (adjust port as needed)
-            ws = new WebSocket('ws://localhost:8765');
-
-            ws.onopen = function() {
-                console.log('Connected to GlaucoGuard server');
-                updateConnectionStatus();
-                document.getElementById('status').textContent = 'READY';
-                // Keep detection paused until streaming starts
-                pauseDetectionUpdates = true;
-                isStreaming = false;
-                phoneConnected = false; // Phone not connected yet
-
-                if (reconnectInterval) {
-                    clearInterval(reconnectInterval);
-                    reconnectInterval = null;
-                }
-            };
-
-            ws.onmessage = function(event) {
-                try {
-                    const data = JSON.parse(event.data);
-                    
-                    // Handle video frames from mobile camera
-                    if (data.type === 'video_frame' && data.data) {
-                        console.log('Video frame received');
-                        // Phone is connected and streaming
-                        phoneConnected = true;
-                        updateConnectionStatus();
-                        // Resume detection updates when streaming starts
-                        pauseDetectionUpdates = false;
-                        // Set streaming flag and process frame
-                        isStreaming = true;
-                        displayVideoFrame(data.data);
-                    } else if (data.type === 'stop_streaming') {
-                        console.log('*** STOP STREAMING RECEIVED - PAUSING VIDEO AND DETECTION ***');
-                        // Immediately stop processing and clear video
-                        isStreaming = false;
-                        pauseDetectionUpdates = true; // Pause detection updates
-                        latestFrame = null; // Clear latest frame
-                        isProcessingFrame = false;
-                        clearVideoFrame();
-                        console.log('Video cleared, isStreaming:', isStreaming);
-                        console.log('Detection updates paused:', pauseDetectionUpdates);
-                    } else if (data.type === 'phone_disconnected') {
-                        console.log('*** PHONE DISCONNECTED - CLEARING VIDEO AND PAUSING ***');
-                        // Phone disconnected - clear everything
-                        phoneConnected = false;
-                        updateConnectionStatus();
-                        isStreaming = false;
-                        pauseDetectionUpdates = true; // Pause detection updates
-                        latestFrame = null; // Clear latest frame
-                        isProcessingFrame = false;
-                        clearVideoFrame();
-                        
-                        // Update status to show phone disconnected
-                        const statusEl = document.getElementById('status');
-                        if (statusEl) {
-                            statusEl.textContent = 'PHONE DISCONNECTED';
-                        }
-                        console.log('Phone disconnected - video cleared');
-                    } else if (data.type === 'connection') {
-                        // Connection message - ignore
-                        console.log('Connection message:', data.message);
-                    } else {
-                        // Handle detection data (messages without 'type' field or with detection/zones)
-                        // CRITICAL: Only process if streaming is active and not paused
-                        if (data.detection !== undefined || data.zones !== undefined) {
-                            // This is detection data - check if we should process it
-                            if (pauseDetectionUpdates || !isStreaming) {
-                                // Ignore detection data when paused or not streaming
-                                console.log('*** DETECTION DATA IGNORED - pauseDetectionUpdates:', pauseDetectionUpdates, 'isStreaming:', isStreaming);
-                                return; // Don't process detection data - exit early
-                            }
-                            // Process detection data only if streaming and not paused
-                            handleDetectionData(data);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error parsing message:', e);
-                }
-            };
-
-            ws.onerror = function(error) {
-                console.error('WebSocket error:', error);
-            };
-
-            ws.onclose = function() {
-                console.log('Disconnected from server');
-                phoneConnected = false;
-                updateConnectionStatus();
-                document.getElementById('status').textContent = 'OFFLINE';
-                clearVideoFrame(); // Clear video when disconnected
-                isStreaming = false; // Ensure streaming flag is reset
-                pauseDetectionUpdates = true; // Pause detection updates when disconnected
-
-                // Attempt to reconnect every 3 seconds
-                if (!reconnectInterval) {
-                    reconnectInterval = setInterval(connectWebSocket, 3000);
-                }
-            };
+        if (!resp.ok) {
+          statusEl.innerHTML = `<span class="error">HTTP ${resp.status}</span>`;
+          imgEl.src = '';
+          lastModifiedEl.textContent = resp.headers.get('last-modified') || '--';
+          sizeBytesEl.textContent = '--';
+          lastFetchEl.textContent = new Date(ts).toLocaleString();
+          footerStatus.textContent = new Date().toLocaleString();
+          return;
         }
 
-        function updateConnectionStatus() {
-            const statusEl = document.getElementById('connectionStatus');
-            if (!statusEl) return;
-            
-            if (ws && ws.readyState === 1) {
-                // Web browser is connected to server
-                if (phoneConnected) {
-                    statusEl.textContent = 'PHONE CONNECTED';
-                    statusEl.classList.add('connected');
-                } else {
-                    statusEl.textContent = 'SERVER CONNECTED (NO PHONE)';
-                    statusEl.classList.remove('connected');
-                }
-            } else {
-                statusEl.textContent = 'DISCONNECTED';
-                statusEl.classList.remove('connected');
-            }
-        }
-        
-        function handleDetectionData(data) {
-            // Update detection count
-            if (data.detection) {
-                detectionCount++;
-                document.getElementById('detectionCount').textContent = detectionCount;
-            }
+        const blob = await resp.blob();
+        sizeBytesEl.textContent = blob.size + ' bytes';
+        lastModifiedEl.textContent = resp.headers.get('last-modified') || '--';
+        lastFetchEl.textContent = new Date(ts).toLocaleString();
+        footerStatus.textContent = new Date().toLocaleString();
 
-            // Update zones
-            if (data.zones) {
-                updateZone('left', data.zones.left);
-                updateZone('center', data.zones.center);
-                updateZone('right', data.zones.right);
-            }
+        const objectUrl = URL.createObjectURL(blob);
+        const prev = imgEl.getAttribute('data-objurl');
+        imgEl.src = objectUrl;
+        imgEl.setAttribute('data-objurl', objectUrl);
+        setTimeout(() => {
+          if (prev) try { URL.revokeObjectURL(prev); } catch (e) {}
+        }, 1000);
 
-            // Update haptic status
-            if (data.haptic) {
-                document.getElementById('hapticStatus').textContent = data.haptic.toUpperCase();
-            }
-        }
+        statusEl.textContent = 'OK';
+      } catch (err) {
+        console.error('Fetch failed', err);
+        statusEl.innerHTML = '<span class="error">fetch error</span>';
+        fetchMsEl.textContent = '--';
+        sizeBytesEl.textContent = '--';
+        lastModifiedEl.textContent = '--';
+        httpStatusEl.textContent = '--';
+      }
+    }
 
-        function updateZone(zone, distance) {
-            const zoneEl = document.getElementById(zone + 'Zone');
-            const distEl = document.getElementById(zone + 'Dist');
+    function startPolling(seconds) {
+      if (intervalId) clearInterval(intervalId);
+      fetchAndShow();
+      intervalId = setInterval(fetchAndShow, Math.max(1, seconds) * 1000);
+    }
 
-            if (distance !== null && distance < 200) {
-                zoneEl.classList.add('active');
-                distEl.textContent = distance + ' cm';
-            } else {
-                zoneEl.classList.remove('active');
-                distEl.textContent = distance !== null ? distance + ' cm' : 'CLEAR';
-            }
-        }
+    document.getElementById('refreshBtn').addEventListener('click', fetchAndShow);
+    document.getElementById('intervalInput').addEventListener('change', (e) => {
+      const v = Number(e.target.value) || 10;
+      startPolling(v);
+    });
 
-        // Display video frame from mobile camera with optimization
-        let lastFrameTime = 0;
-        const targetFPS = 120; // Target 120 FPS display for maximum smoothness
-        const frameInterval = 1000 / targetFPS; // ~8ms between frames (minimal throttling)
-        let isStreaming = false;
-        let latestFrame = null; // Store only the latest frame for minimal latency
-        let isProcessingFrame = false;
-        let pauseDetectionUpdates = true; // Start with detection paused - only show when streaming
-        
-        function displayVideoFrame(base64Data) {
-            // Double check streaming status before processing
-            if (!isStreaming) {
-                return; // Don't display if not streaming
-            }
-            
-            // Store latest frame (always overwrite for minimal latency)
-            latestFrame = base64Data;
-            
-            // Process immediately - no waiting
-            if (isStreaming) {
-                updateFrameImmediately();
-            }
-        }
-        
-        function updateFrameImmediately() {
-            // Stop processing if not streaming
-            if (!isStreaming || !latestFrame) {
-                return;
-            }
-            
-            const base64Data = latestFrame;
-            const video = document.getElementById('video');
-            
-            if (video && base64Data) {
-                showVideoFrame(); // Show video element
-                // Direct assignment - no requestAnimationFrame delay for maximum speed
-                video.src = 'data:image/jpeg;base64,' + base64Data;
-            }
-        }
-        
-        // Legacy function name for compatibility
-        function processFrameQueue() {
-            updateFrameImmediately();
-        }
-        
-        function clearVideoFrame() {
-            console.log('*** CLEARING VIDEO FRAME - PAUSING VIDEO AND DETECTION ***');
-            // Immediately stop all processing
-            isStreaming = false;
-            pauseDetectionUpdates = true; // Pause detection updates
-            latestFrame = null; // Clear latest frame
-            isProcessingFrame = false;
-            
-            const video = document.getElementById('video');
-            const noVideoMsg = document.getElementById('noVideoMessage');
-            
-            if (!video) {
-                console.error('Video element not found!');
-                return;
-            }
-            
-            // Clear the image immediately - use multiple methods to ensure it clears
-            video.src = '';
-            video.removeAttribute('src');
-            video.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-            video.style.display = 'none';
-            
-            if (noVideoMsg) {
-                noVideoMsg.style.display = 'block';
-                console.log('No video message displayed');
-            } else {
-                console.error('No video message element not found!');
-            }
-            
-            // Update status to show paused
-            const statusEl = document.getElementById('status');
-            if (statusEl) {
-                statusEl.textContent = 'PAUSED';
-            }
-            
-            // Clear all detection zones to show they're paused
-            updateZone('left', null);
-            updateZone('center', null);
-            updateZone('right', null);
-            document.getElementById('detectionCount').textContent = '0';
-            document.getElementById('hapticStatus').textContent = 'PAUSED';
-            
-            console.log('Video cleared. Video display:', video.style.display);
-            console.log('isStreaming flag:', isStreaming);
-            console.log('Detection updates paused:', pauseDetectionUpdates);
-        }
-        
-        function showVideoFrame() {
-            const video = document.getElementById('video');
-            const noVideoMsg = document.getElementById('noVideoMessage');
-            video.style.display = 'block';
-            if (noVideoMsg) {
-                noVideoMsg.style.display = 'none';
-            }
-        }
-
-        // Start the application
-        window.onload = function() {
-            // Don't initialize local camera - we'll use phone camera instead
-            connectWebSocket();
-        };
-    </script>
+    startPolling(10);
+    setInterval(() => {
+      footerStatus.textContent = new Date().toLocaleString();
+    }, 1000);
+  </script>
 </body>
 </html>
