@@ -2,6 +2,9 @@
 
 A real-time obstacle detection system with haptic feedback, designed for visual assistance applications.
 
+## Demo
+https://youtu.be/NBzJI06XH1o?feature=shared
+
 ## Features
 
 - **Real-time Detection**: Monitor three zones (LEFT, CENTER, RIGHT) for obstacles
